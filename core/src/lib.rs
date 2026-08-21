@@ -70,16 +70,19 @@ pub use object::{
     ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
 };
 pub use object::Aabb;
-pub use repository::{AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult};
+pub use repository::{
+    AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult, ObjectIngest,
+};
 pub use root::{
     distance_from_checkpoint, get_root_closure_blobs, get_root_closure_blobs_with_options,
     missing_active_objects, resolve_controller_keys, should_checkpoint_at, should_emit_checkpoint,
-    ClosureOptions, ClosureResult, RootBody, RootBuilder, CHECKPOINT_INTERVAL,
+    ClosureOptions, ClosureResult, ClosureView, RootBody, RootBuilder, RootClosure,
+    CHECKPOINT_INTERVAL,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::{
-    atomic_write, is_tmp_name, unique_tmp_path, ObjectStore, WriteGuard, MAX_OBJECT_BYTES,
-    STORE_LOCK_FILE,
+    atomic_write, is_tmp_name, unique_tmp_path, MemObjectStore, ObjectRead, ObjectStore,
+    ObjectWrite, WriteGuard, MAX_OBJECT_BYTES, STORE_LOCK_FILE,
 };
 pub use verify::{
     verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,

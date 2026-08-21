@@ -5,8 +5,8 @@ use std::path::Path;
 
 use arxos_core::object::{Object, ObjectBody, ObjectType, Pose};
 use arxos_core::repository::BuildingRepository;
-use arxos_core::root::RootBody;
-use arxos_core::store::ObjectStore;
+use arxos_core::root::{ClosureOptions, RootBody, RootClosure};
+use arxos_core::store::{ObjectRead, ObjectStore};
 use arxos_core::{BuildingId, Cid};
 
 use crate::error::{IfcError, Result};
@@ -86,11 +86,11 @@ pub fn export_building_ifc(
     building_id: &BuildingId,
     opts: &ExportOptions,
 ) -> Result<String> {
-    let repo = BuildingRepository::open(store_path.as_ref(), building_id)?;
+    let repo = BuildingRepository::open_read(store_path.as_ref(), building_id)?;
     let head = repo
         .head_root()
         .ok_or_else(|| IfcError::NotFound("no head root".into()))?;
-    export_root_ifc(store_path, &head, opts)
+    export_from_read(&repo, &head, opts)
 }
 
 /// Export a root CID to IFC4 STEP text.
@@ -100,13 +100,23 @@ pub fn export_root_ifc(
     opts: &ExportOptions,
 ) -> Result<String> {
     let store = ObjectStore::open(store_path.as_ref())?;
-    let root_obj = store.get(root_cid)?;
-    let root = RootBody::from_object(&root_obj)?;
-    write_ifc(&store, root_cid, root, opts)
+    export_from_read(&store, root_cid, opts)
 }
 
-fn write_ifc(
-    store: &ObjectStore,
+fn export_from_read<R: ObjectRead + ?Sized>(
+    store: &R,
+    root_cid: &Cid,
+    opts: &ExportOptions,
+) -> Result<String> {
+    let closure = RootClosure::collect(store, root_cid, &ClosureOptions::default())?;
+    let view = closure.as_read();
+    let root_obj = view.get(root_cid)?;
+    let root = RootBody::from_object(&root_obj)?;
+    write_ifc(&view, root_cid, root, opts)
+}
+
+fn write_ifc<R: ObjectRead + ?Sized>(
+    store: &R,
     root_cid: &Cid,
     root: &RootBody,
     opts: &ExportOptions,

@@ -133,7 +133,12 @@ pub struct ObjectPutResult {
     pub object_type: String,
 }
 
-/// Put a blob into the local store at `store_path`.
+/// Debug CAS operation: put a blob into the local store at `store_path`.
+///
+/// Low-level content-addressed write. No building is attached; this does not
+/// stage objects or update a building head. Prefer [`BuildingRepository`]
+/// capture + commit for building data. Takes the exclusive store lock so it
+/// cannot race a repository writer.
 pub fn put_blob(
     store_path: String,
     data: Vec<u8>,
@@ -185,7 +190,11 @@ fn keypair_from_seed_hex(seed_hex: &str) -> Result<Keypair, ArxosError> {
     Ok(Keypair::from_seed(seed))
 }
 
-/// Create and store a signed root from existing object CID strings.
+/// Debug CAS operation: write a signed root from existing object CID strings.
+///
+/// Writes through [`BuildingRepository`] (exclusive lock) but does **not**
+/// stage objects or update the building head. Prefer [`commit_building`] /
+/// `BuildingRepository::commit` for domain commits.
 pub fn create_root(
     store_path: String,
     building_id: String,
@@ -193,9 +202,11 @@ pub fn create_root(
     seed_hex: String,
     message: Option<String>,
 ) -> Result<RootCreateResult, ArxosError> {
-    let store = ObjectStore::open(&store_path)?;
-    let _write_lock = store.try_lock_exclusive()?;
     let kp = keypair_from_seed_hex(&seed_hex)?;
+    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
+        message: format!("invalid building id: {e}"),
+    })?;
+    let repo = BuildingRepository::open_or_follow(&store_path, &bid, None)?;
 
     let mut set = BTreeSet::new();
     for s in &object_cids {
@@ -204,9 +215,6 @@ pub fn create_root(
         })?);
     }
     let count = set.len() as u64;
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: format!("invalid building id: {e}"),
-    })?;
 
     let mut builder = RootBuilder::new(bid.clone(), now_secs()).objects(set);
     if let Some(msg) = message {
@@ -215,9 +223,9 @@ pub fn create_root(
     let (obj, root_cid) = builder.build_signed(&kp)?;
     {
         let root = RootBody::from_object(&obj)?;
-        root.verify_with_store(&store)?;
+        root.verify_with_store(&repo)?;
     }
-    store.put(&obj)?;
+    repo.put_object(&obj)?;
 
     Ok(RootCreateResult {
         root_cid: root_cid.to_string(),
@@ -283,7 +291,7 @@ pub fn init_building(
     Ok(summary_from_repo(&repo))
 }
 
-/// Open an existing building and materialize its head working set.
+/// Open an existing building for read (no exclusive store lock) and return a summary.
 pub fn open_building(
     store_path: String,
     building_id: String,
@@ -291,7 +299,7 @@ pub fn open_building(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let repo = BuildingRepository::open(&store_path, &bid)?;
+    let repo = BuildingRepository::open_read(&store_path, &bid)?;
     Ok(summary_from_repo(&repo))
 }
 
@@ -338,7 +346,7 @@ pub fn capture_space(
     })?;
     let mut repo = BuildingRepository::open(&store_path, &bid)?;
     let res = repo.capture_space(&SpaceCapture {
-                    entity_id: None,
+        entity_id: None,
         name,
         pose: pose(x, y, z),
         bounds: None,
@@ -450,7 +458,7 @@ pub fn annotations_near(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = BuildingRepository::open_read(&store_path, &bid)?;
     let hits = repo.annotations_near(&pose(x, y, z), radius_m)?;
     Ok(hits
         .into_iter()
@@ -727,14 +735,14 @@ pub fn query_spatial_volume(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let repo = BuildingRepository::open(&store_path, &bid)?;
+    let repo = BuildingRepository::open_read(&store_path, &bid)?;
     let volume =
         arxos_core::QueryVolume::from_min_max([min_x, min_y, min_z], [max_x, max_y, max_z]);
 
     let hits = repo.query_volume(&volume)?;
     let mut out = Vec::new();
     for hit in hits {
-        if let Ok(obj) = repo.store().get(&hit.object) {
+        if let Ok(obj) = repo.get_object(&hit.object) {
             let object_type = obj.header.object_type.as_str().to_string();
             let (name, pose_pos, properties) = match &obj.body {
                 ObjectBody::Space(s) => {
@@ -871,8 +879,8 @@ pub fn export_usd(
     let opts = arxos_usd::ExportOptions::default();
     let content = arxos_usd::export_building_usda(std::path::Path::new(&store_path), &bid, &opts)
         .map_err(|e| ArxosError::Store {
-            message: e.to_string(),
-        })?;
+        message: e.to_string(),
+    })?;
     std::fs::write(&output_path, content).map_err(|e| ArxosError::Store {
         message: format!("write {}: {e}", output_path),
     })?;
@@ -950,15 +958,7 @@ mod tests {
         let seed_path = std::path::Path::new(&path).join("keys").join("device.seed");
         arxos_core::write_secret_bytes(&seed_path, outsider.seed().as_ref()).unwrap();
 
-        capture_annotation(
-            path.clone(),
-            bid.clone(),
-            "note".into(),
-            0.0,
-            0.0,
-            0.0,
-        )
-        .unwrap();
+        capture_annotation(path.clone(), bid.clone(), "note".into(), 0.0, 0.0, 0.0).unwrap();
         let err = commit_building(path, bid, Some("should fail".into())).unwrap_err();
         assert!(
             matches!(err, ArxosError::Authorization { .. }),

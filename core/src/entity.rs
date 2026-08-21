@@ -18,6 +18,8 @@ use ulid::Ulid;
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectBody};
+use crate::store::ObjectRead;
+#[cfg(test)]
 use crate::store::ObjectStore;
 
 /// Stable identifier for a physical entity within a building graph.
@@ -123,8 +125,8 @@ struct Candidate {
 /// 3. Else highest `Cid`
 ///
 /// Objects without `entity_id` or missing from the store are kept as-is.
-pub fn collapse_active_set(
-    store: &ObjectStore,
+pub fn collapse_active_set<R: ObjectRead + ?Sized>(
+    store: &R,
     cids: &BTreeSet<Cid>,
 ) -> Result<CollapseResult> {
     collapse_active_set_preferring(store, cids, &BTreeSet::new())
@@ -132,8 +134,8 @@ pub fn collapse_active_set(
 
 /// Like [`collapse_active_set`], but on equal `created` prefers CIDs in `prefer`
 /// (typically the staged set on commit).
-pub fn collapse_active_set_preferring(
-    store: &ObjectStore,
+pub fn collapse_active_set_preferring<R: ObjectRead + ?Sized>(
+    store: &R,
     cids: &BTreeSet<Cid>,
     prefer: &BTreeSet<Cid>,
 ) -> Result<CollapseResult> {
@@ -211,8 +213,8 @@ fn beats(prev: &Candidate, cand: &Candidate, prefer: &BTreeSet<Cid>) -> bool {
 }
 
 /// Find active CIDs that carry `entity_id`.
-pub fn find_entity_versions(
-    store: &ObjectStore,
+pub fn find_entity_versions<R: ObjectRead + ?Sized>(
+    store: &R,
     cids: &BTreeSet<Cid>,
     entity_id: &EntityId,
 ) -> Result<BTreeSet<Cid>> {

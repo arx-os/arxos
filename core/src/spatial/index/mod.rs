@@ -18,7 +18,7 @@ use crate::error::{Error, Result};
 use crate::object::{
     Aabb, Object, ObjectBody, ObjectHeader, ObjectType, SpatialIndexNodeBody, SCHEMA_VERSION,
 };
-use crate::store::ObjectStore;
+use crate::store::{ObjectRead, ObjectStore};
 
 use super::aabb::POINT_HALF_EXTENT_M;
 
@@ -177,7 +177,10 @@ pub fn entry_from_object(cid: Cid, obj: &Object) -> Option<SpatialEntry> {
 }
 
 /// Collect spatial entries for an object set from the store.
-pub fn collect_entries(store: &ObjectStore, cids: impl IntoIterator<Item = Cid>) -> Result<Vec<SpatialEntry>> {
+pub fn collect_entries<R: ObjectRead + ?Sized>(
+    store: &R,
+    cids: impl IntoIterator<Item = Cid>,
+) -> Result<Vec<SpatialEntry>> {
     let mut out = Vec::new();
     for cid in cids {
         match store.get(&cid) {

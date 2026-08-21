@@ -26,7 +26,7 @@ fn ifc_roundtrip_identity() {
         elevation_m: 0.0,
         properties: BTreeMap::new(),
     }));
-    let floor_cid = repo.store().put(&floor).unwrap();
+    let floor_cid = repo.put_object(&floor).unwrap();
 
     repo.capture_space(&SpaceCapture {
                     entity_id: None,

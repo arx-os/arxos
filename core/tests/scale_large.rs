@@ -45,7 +45,7 @@ fn test_large_scale_incremental_commits() {
         let commit_res = repo.commit(Some(format!("batch-{b}"))).unwrap();
         let commit_ms = t_commit_start.elapsed().as_millis();
 
-        let root_obj = repo.store().get(&commit_res.root_cid).unwrap();
+        let root_obj = repo.get_object(&commit_res.root_cid).unwrap();
         let cbor_bytes = root_obj.to_canonical_bytes().unwrap();
 
         println!(

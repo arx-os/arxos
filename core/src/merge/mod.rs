@@ -22,7 +22,7 @@ use crate::error::{Error, Result};
 use crate::object::{BuildingId, Object, ObjectBody, ObjectType, Pose};
 use crate::root::{RootBody, RootBuilder};
 use crate::spatial;
-use crate::store::ObjectStore;
+use crate::store::{ObjectRead, ObjectWrite};
 
 /// Distance under which annotations with identical text are considered duplicates.
 pub const ANNOTATION_DEDUP_M: f64 = 0.35;
@@ -39,7 +39,10 @@ pub struct MergeResult {
 }
 
 /// Load a root body by object CID.
-pub fn load_root(store: &ObjectStore, root_cid: &Cid) -> Result<(Object, RootBody)> {
+pub fn load_root<R: ObjectRead + ?Sized>(
+    store: &R,
+    root_cid: &Cid,
+) -> Result<(Object, RootBody)> {
     let obj = store.get(root_cid)?;
     let body = RootBody::from_object(&obj)?.clone();
     Ok((obj, body))
@@ -59,7 +62,10 @@ struct AnnMeta {
     created: u64,
 }
 
-fn collect_annotations(store: &ObjectStore, cids: &BTreeSet<Cid>) -> Result<Vec<AnnMeta>> {
+fn collect_annotations<R: ObjectRead + ?Sized>(
+    store: &R,
+    cids: &BTreeSet<Cid>,
+) -> Result<Vec<AnnMeta>> {
     let mut out = Vec::new();
     for cid in cids {
         let obj = match store.get(cid) {
@@ -83,7 +89,10 @@ fn collect_annotations(store: &ObjectStore, cids: &BTreeSet<Cid>) -> Result<Vec<
 }
 
 /// Apply annotation dedupe rules; returns CIDs to drop.
-pub fn annotation_dedupe_drops(store: &ObjectStore, objects: &BTreeSet<Cid>) -> Result<BTreeSet<Cid>> {
+pub fn annotation_dedupe_drops<R: ObjectRead + ?Sized>(
+    store: &R,
+    objects: &BTreeSet<Cid>,
+) -> Result<BTreeSet<Cid>> {
     let anns = collect_annotations(store, objects)?;
     let mut drop = BTreeSet::new();
     for i in 0..anns.len() {
@@ -120,7 +129,7 @@ pub fn annotation_dedupe_drops(store: &ObjectStore, objects: &BTreeSet<Cid>) -> 
 }
 
 /// Walk `previous_root` from `tip` collecting ancestor CIDs (including tip).
-fn ancestor_chain(store: &ObjectStore, tip: Cid) -> Result<Vec<Cid>> {
+fn ancestor_chain<R: ObjectRead + ?Sized>(store: &R, tip: Cid) -> Result<Vec<Cid>> {
     let mut chain = Vec::new();
     let mut visited = BTreeSet::new();
     let mut cur = Some(tip);
@@ -138,8 +147,8 @@ fn ancestor_chain(store: &ObjectStore, tip: Cid) -> Result<Vec<Cid>> {
 /// Nearest common ancestor of two root tips on the linear `previous_root` chain.
 ///
 /// Returns `None` only when histories are disjoint (no shared ancestor).
-pub fn find_common_ancestor(
-    store: &ObjectStore,
+pub fn find_common_ancestor<R: ObjectRead + ?Sized>(
+    store: &R,
     root_a: Cid,
     root_b: Cid,
 ) -> Result<Option<Cid>> {
@@ -154,7 +163,11 @@ pub fn find_common_ancestor(
 }
 
 /// True if `ancestor` appears on the `previous_root` chain of `desc` (inclusive).
-fn is_ancestor_of(store: &ObjectStore, ancestor: Cid, desc: Cid) -> Result<bool> {
+fn is_ancestor_of<R: ObjectRead + ?Sized>(
+    store: &R,
+    ancestor: Cid,
+    desc: Cid,
+) -> Result<bool> {
     Ok(ancestor_chain(store, desc)?.contains(&ancestor))
 }
 
@@ -187,8 +200,8 @@ pub fn three_way_object_set(
 }
 
 /// Keep at most one Building object per [`BuildingId`] (newest `created`, then CID).
-fn collapse_buildings(
-    store: &ObjectStore,
+fn collapse_buildings<R: ObjectRead + ?Sized>(
+    store: &R,
     objects: &BTreeSet<Cid>,
 ) -> Result<(BTreeSet<Cid>, u64)> {
     let mut best: BTreeMap<BuildingId, (Cid, u64)> = BTreeMap::new();
@@ -240,8 +253,8 @@ fn collapse_buildings(
 /// Merge two root objects already present in `store`.
 ///
 /// The merged root is signed by `keypair` and written to the store.
-pub fn merge_roots(
-    store: &ObjectStore,
+pub fn merge_roots<W: ObjectWrite + ?Sized>(
+    store: &W,
     root_a: Cid,
     root_b: Cid,
     keypair: &Keypair,
@@ -376,7 +389,11 @@ pub struct MergePlan {
 }
 
 /// Dry-run merge planning without writing.
-pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<MergePlan> {
+pub fn plan_merge<R: ObjectRead + ?Sized>(
+    store: &R,
+    root_a: Cid,
+    root_b: Cid,
+) -> Result<MergePlan> {
     let (_, a) = load_root(store, &root_a)?;
     let (_, b) = load_root(store, &root_b)?;
     if a.building_id != b.building_id {
@@ -417,9 +434,10 @@ pub fn plan_merge(store: &ObjectStore, root_a: Cid, root_b: Cid) -> Result<Merge
 mod tests {
     use super::*;
     use crate::capture::{annotation_object, space_object, AnnotationCapture, SpaceCapture};
+    use crate::crypto::Keypair;
     use crate::entity::{entity_id_of, EntityId};
     use crate::object::{BuildingBody, BuildingId, ObjectBody, Pose};
-    use crate::crypto::Keypair;
+    use crate::store::ObjectStore;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 

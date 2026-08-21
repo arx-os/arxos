@@ -25,6 +25,7 @@ impl BuildingRepository {
         message: Option<String>,
         rebuild_spatial: bool,
     ) -> Result<CommitResult> {
+        self.require_write()?;
         let kp = self
             .keypair
             .as_ref()
@@ -49,9 +50,7 @@ impl BuildingRepository {
         let new_active = collapsed.kept;
 
         if new_active.is_empty() {
-            return Err(Error::Validation(
-                "cannot commit empty object set".into(),
-            ));
+            return Err(Error::Validation("cannot commit empty object set".into()));
         }
 
         let added: BTreeSet<_> = new_active

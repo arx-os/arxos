@@ -28,7 +28,7 @@ fn usd_roundtrip_identity() {
         elevation_m: 0.0,
         properties: BTreeMap::new(),
     }));
-    let floor_cid = repo.store().put(&floor).unwrap();
+    let floor_cid = repo.put_object(&floor).unwrap();
     // stage floor by putting into pending via capture_space path — use raw put + pending
     // Through capture APIs:
     repo.capture_space(&SpaceCapture {

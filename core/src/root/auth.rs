@@ -6,7 +6,7 @@ use crate::cid::Cid;
 use crate::crypto::PublicKey;
 use crate::error::{Error, Result};
 use crate::object::{BuildingId, ObjectBody};
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 use super::RootBody;
 
@@ -14,8 +14,8 @@ use super::RootBody;
 ///
 /// Fail closed if no matching Building object is present, or if `controller_keys`
 /// is empty.
-pub fn resolve_controller_keys(
-    store: &ObjectStore,
+pub fn resolve_controller_keys<R: ObjectRead + ?Sized>(
+    store: &R,
     active: &BTreeSet<Cid>,
     building_id: &BuildingId,
 ) -> Result<Vec<PublicKey>> {
@@ -89,7 +89,7 @@ impl RootBody {
     /// verify that every author is an authorized controller with valid signatures.
     ///
     /// This is the single verification entry point for adopt/commit/CLI/network.
-    pub fn verify_with_store(&self, store: &ObjectStore) -> Result<()> {
+    pub fn verify_with_store<R: ObjectRead + ?Sized>(&self, store: &R) -> Result<()> {
         let active = self.materialize_active_objects(store)?;
         let controllers = resolve_controller_keys(store, &active, &self.building_id)?;
         self.verify_authorized(&controllers)
@@ -102,6 +102,7 @@ mod tests {
     use crate::crypto::Keypair;
     use crate::object::{BuildingBody, Object};
     use crate::root::RootBuilder;
+    use crate::store::ObjectStore;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 

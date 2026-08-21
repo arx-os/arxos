@@ -3,7 +3,7 @@
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Aabb, Object, ObjectBody};
-use crate::store::ObjectStore;
+use crate::store::{ObjectRead, ObjectWrite};
 
 use super::super::aabb::union_all;
 use super::build::build_index;
@@ -19,8 +19,8 @@ enum InsertResult {
 
 /// Insert new spatial entries incrementally into an existing index tree.
 /// Reuses unchanged subtrees (structural sharing).
-pub fn insert_incremental(
-    store: &ObjectStore,
+pub fn insert_incremental<W: ObjectWrite + ?Sized>(
+    store: &W,
     root_cid: Option<Cid>,
     new_entries: Vec<SpatialEntry>,
 ) -> Result<Option<Cid>> {
@@ -30,7 +30,7 @@ pub fn insert_incremental(
     let cache = std::cell::RefCell::new(std::collections::BTreeMap::new());
 
     // Helper closure to get from cache or store (and cache the read result)
-    let get_obj = |cid: &Cid, cache: &std::cell::RefCell<std::collections::BTreeMap<Cid, Object>>, store: &ObjectStore| -> Result<Object> {
+    let get_obj = |cid: &Cid, cache: &std::cell::RefCell<std::collections::BTreeMap<Cid, Object>>, store: &W| -> Result<Object> {
         if let Some(obj) = cache.borrow().get(cid) {
             return Ok(obj.clone());
         }
@@ -108,15 +108,20 @@ pub fn insert_incremental(
     Ok(current_root)
 }
 
-fn insert_recursive_cached<F>(
-    store: &ObjectStore,
+fn insert_recursive_cached<W, F>(
+    store: &W,
     cache: &std::cell::RefCell<std::collections::BTreeMap<Cid, Object>>,
     get_obj: &F,
     node_cid: Cid,
     entry: &SpatialEntry,
 ) -> Result<InsertResult>
 where
-    F: Fn(&Cid, &std::cell::RefCell<std::collections::BTreeMap<Cid, Object>>, &ObjectStore) -> Result<Object>,
+    W: ObjectWrite + ?Sized,
+    F: Fn(
+        &Cid,
+        &std::cell::RefCell<std::collections::BTreeMap<Cid, Object>>,
+        &W,
+    ) -> Result<Object>,
 {
     let obj = get_obj(&node_cid, cache, store)?;
     let ObjectBody::SpatialIndexNode(node) = obj.body else {

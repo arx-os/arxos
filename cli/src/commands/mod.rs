@@ -7,6 +7,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
+use arxos_core::attest::{AttestationStatement, AttestationVerifier, DefaultAttestationVerifier};
 use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::merge::plan_merge;
 use arxos_core::object::{
@@ -14,16 +15,15 @@ use arxos_core::object::{
 };
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
+use arxos_core::scoring::score_root;
 use arxos_core::spatial::QueryVolume;
 use arxos_core::store::ObjectStore;
-use arxos_core::attest::{AttestationStatement, DefaultAttestationVerifier, AttestationVerifier};
-use arxos_core::scoring::score_root;
 use arxos_core::verify::verify_root_transition;
 use arxos_core::{Cid, EntityId, Keypair, PublicKey};
+use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
 use arxos_networking::sync::{building_ads_from_store, pull_root_with_options};
 use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
 use arxos_usd::{export_building_usda, import_usda, ExportOptions as UsdExportOptions};
-use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
 
 use crate::args::{
     BuildingCommands, CaptureCommands, Cli, Commands, EntityCommands, ExportCommands,
@@ -75,17 +75,11 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 if !no_mdns {
                     match MdnsDiscovery::new() {
                         Ok(d) => {
-                            let instance = format!(
-                                "arxos-{}",
-                                &node.peer_id()[..8.min(node.peer_id().len())]
-                            );
-                            if let Err(e) = d.announce(
-                                &instance,
-                                node.peer_id(),
-                                11223,
-                                Some(&ticket),
-                                &ads,
-                            ) {
+                            let instance =
+                                format!("arxos-{}", &node.peer_id()[..8.min(node.peer_id().len())]);
+                            if let Err(e) =
+                                d.announce(&instance, node.peer_id(), 11223, Some(&ticket), &ads)
+                            {
                                 eprintln!("warning: mDNS announce failed: {e}");
                             } else {
                                 println!("mdns=advertising as {instance}");
@@ -158,10 +152,7 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 }
                 node.close().await;
             }
-            NetCommands::Publish {
-                peer,
-                building_id,
-            } => {
+            NetCommands::Publish { peer, building_id } => {
                 let mut ads = building_ads_from_store(&cli.store)?;
                 if let Some(bid) = &building_id {
                     ads.retain(|a| &a.building_id == bid);
@@ -247,7 +238,6 @@ pub async fn run_async(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-
 pub fn run_sync(cli: Cli) -> Result<()> {
     match cli.command {
         Commands::Version => {
@@ -276,10 +266,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("{}", repo.building_id());
                 } else {
                     println!("building_id={}", repo.building_id());
-                    println!(
-                        "name={}",
-                        repo.record().name.clone().unwrap_or_default()
-                    );
+                    println!("name={}", repo.record().name.clone().unwrap_or_default());
                     println!(
                         "head_root={}",
                         repo.head_root()
@@ -295,12 +282,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     );
                 }
             }
-            BuildingCommands::Show {
-                building_id,
-                json,
-            } => {
+            BuildingCommands::Show { building_id, json } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)?;
                 let r = repo.record();
                 if json {
                     println!(
@@ -399,7 +383,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 radius,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let mut repo = BuildingRepository::open_read(&cli.store, &bid)?;
                 let origin = Pose {
                     position: [x, y, z],
                     orientation: [0.0, 0.0, 0.0, 1.0],
@@ -430,17 +414,15 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
                     format!("open building {bid} (store may be locked by edge serve or another arx process)")
                 })?;
-                let res = repo
-                    .add_controller_key(pk)
-                    .with_context(|| "add_controller_key failed (caller must be a current controller)")?;
+                let res = repo.add_controller_key(pk).with_context(|| {
+                    "add_controller_key failed (caller must be a current controller)"
+                })?;
                 if !quiet {
                     println!("building_object={}", res.cid);
                     println!("controllers={}", repo.controller_keys()?.len());
                 }
                 if !no_commit {
-                    let commit = repo.commit(
-                        message.or_else(|| Some("add controller".into())),
-                    )?;
+                    let commit = repo.commit(message.or_else(|| Some("add controller".into())))?;
                     if quiet {
                         println!("{}", commit.root_cid);
                     } else {
@@ -474,9 +456,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("controllers={}", repo.controller_keys()?.len());
                 }
                 if !no_commit {
-                    let commit = repo.commit(
-                        message.or_else(|| Some("remove controller".into())),
-                    )?;
+                    let commit =
+                        repo.commit(message.or_else(|| Some("remove controller".into())))?;
                     if quiet {
                         println!("{}", commit.root_cid);
                     } else {
@@ -489,17 +470,10 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("pending (use building commit to finish)");
                 }
             }
-            BuildingCommands::Controllers {
-                building_id,
-                json,
-            } => {
+            BuildingCommands::Controllers { building_id, json } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)
-                    .with_context(|| {
-                        format!(
-                            "open building {bid} (is the store locked by edge serve or another arx process?)"
-                        )
-                    })?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)
+                    .with_context(|| format!("open building {bid} for read"))?;
                 let keys = repo.controller_keys()?;
                 if json {
                     let v: Vec<_> = keys.iter().map(|k| k.to_string()).collect();
@@ -512,10 +486,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     }
                 }
             }
-            BuildingCommands::Status {
-                building_id,
-                json,
-            } => {
+            BuildingCommands::Status { building_id, json } => {
                 let bid = BuildingId::from_str(&building_id)?;
                 // Probe exclusive lock without holding a repository session.
                 let lock_status = {
@@ -525,10 +496,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         Err(_) => "held",
                     }
                 };
-                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
-                    format!(
-                        "open building {bid} (store lock status was {lock_status}; another writer may hold store.lock)"
-                    )
+                let repo = BuildingRepository::open_read(&cli.store, &bid).with_context(|| {
+                    format!("open building {bid} for read (store_lock={lock_status})")
                 })?;
                 let r = repo.record();
                 let controllers = repo.controller_keys().unwrap_or_default();
@@ -590,9 +559,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
                     format!("open building {bid} (store may be locked by edge serve or another arx process)")
                 })?;
-                let n = repo
-                    .remove_entity(&eid)
-                    .with_context(|| "remove_entity")?;
+                let n = repo.remove_entity(&eid).with_context(|| "remove_entity")?;
                 if n == 0 {
                     bail!("no active versions found for entity {eid} (unknown or already removed)");
                 }
@@ -601,9 +568,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("versions_staged_for_removal={n}");
                 }
                 if !no_commit {
-                    let commit = repo.commit(
-                        message.or_else(|| Some(format!("remove entity {eid}"))),
-                    )?;
+                    let commit =
+                        repo.commit(message.or_else(|| Some(format!("remove entity {eid}"))))?;
                     if quiet {
                         println!("{}", commit.root_cid);
                     } else {
@@ -616,14 +582,10 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("pending (use building commit to finish)");
                 }
             }
-            EntityCommands::List {
-                building_id,
-                json,
-            } => {
+            EntityCommands::List { building_id, json } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
-                    format!("open building {bid} (store may be locked by another process)")
-                })?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)
+                    .with_context(|| format!("open building {bid} for read"))?;
                 let heads = repo.list_entity_heads()?;
                 if json {
                     let v: Vec<_> = heads
@@ -653,14 +615,13 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 let bid = BuildingId::from_str(&building_id)?;
                 let eid = EntityId::from_str(&entity_id)
                     .with_context(|| format!("invalid entity id: {entity_id}"))?;
-                let repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
-                    format!("open building {bid} (store may be locked by another process)")
-                })?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)
+                    .with_context(|| format!("open building {bid} for read"))?;
                 let heads = repo.list_entity_heads()?;
                 let Some((_, cid, ty)) = heads.into_iter().find(|(e, _, _)| e == &eid) else {
                     bail!("entity {eid} not found in active set of building {bid}");
                 };
-                let obj = repo.store().get(&cid)?;
+                let obj = repo.get_object(&cid)?;
                 let created = obj.header.created;
                 let author = obj.header.author.map(|a| a.to_string());
                 let (name, floor, pose, bounds, kind) = match &obj.body {
@@ -685,15 +646,27 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         None,
                         b.equipment_kind.clone(),
                     ),
-                    ObjectBody::Surface(b) => {
-                        (None, None, b.pose.clone(), b.bounds.clone(), b.surface_kind.clone())
-                    }
-                    ObjectBody::Sensor(b) => {
-                        (b.name.clone(), None, b.pose.clone(), None, b.sensor_kind.clone())
-                    }
-                    ObjectBody::Fixture(b) => {
-                        (b.name.clone(), None, b.pose.clone(), None, b.fixture_kind.clone())
-                    }
+                    ObjectBody::Surface(b) => (
+                        None,
+                        None,
+                        b.pose.clone(),
+                        b.bounds.clone(),
+                        b.surface_kind.clone(),
+                    ),
+                    ObjectBody::Sensor(b) => (
+                        b.name.clone(),
+                        None,
+                        b.pose.clone(),
+                        None,
+                        b.sensor_kind.clone(),
+                    ),
+                    ObjectBody::Fixture(b) => (
+                        b.name.clone(),
+                        None,
+                        b.pose.clone(),
+                        None,
+                        b.fixture_kind.clone(),
+                    ),
                     ObjectBody::Opening(b) => {
                         (None, None, b.pose.clone(), None, b.opening_kind.clone())
                     }
@@ -825,8 +798,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     orientation: [0.0, 0.0, 0.0, 1.0],
                 };
                 let capture = if let Some(path) = file {
-                    let bytes = fs::read(&path)
-                        .with_context(|| format!("read {}", path.display()))?;
+                    let bytes =
+                        fs::read(&path).with_context(|| format!("read {}", path.display()))?;
                     let mut properties = BTreeMap::new();
                     properties.insert("format".into(), "xyz_f32_le".into());
                     properties.insert("source".into(), "file".into());
@@ -906,7 +879,10 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("root_cid={}", res.root_cid);
                     println!("object_count={}", res.object_count);
                 } else {
-                    println!("pending={} (use building commit to finish)", repo.record().pending.len());
+                    println!(
+                        "pending={} (use building commit to finish)",
+                        repo.record().pending.len()
+                    );
                 }
             }
         },
@@ -960,8 +936,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             })
                         }
                         ObjectType::Building => {
-                            let bid = match building_id {
-                                Some(s) => BuildingId::from_str(&s)?,
+                            let bid = match &building_id {
+                                Some(s) => BuildingId::from_str(s)?,
                                 None => BuildingId::new(),
                             };
                             let controllers = if let Some(seed) = &sign_seed {
@@ -986,13 +962,32 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         let kp = crate::util::keypair_from_seed_hex(&seed)?;
                         obj.sign(&kp)?;
                     }
-                    let _write_lock = store.try_lock_exclusive().with_context(|| {
-                        format!(
-                            "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
-                            cli.store.display()
-                        )
-                    })?;
-                    let cid = store.put(&obj)?;
+                    let repo_bid = match &obj.body {
+                        ObjectBody::Building(b) => Some(b.building_id.clone()),
+                        _ => building_id
+                            .as_ref()
+                            .map(|s| BuildingId::from_str(s))
+                            .transpose()?,
+                    };
+                    let cid = if let Some(bid) = repo_bid {
+                        let repo = BuildingRepository::open_or_follow(&cli.store, &bid, None)
+                            .with_context(|| {
+                                format!(
+                                    "open building {bid} for object put (store may be locked by another process)"
+                                )
+                            })?;
+                        repo.put_object(&obj)?
+                    } else {
+                        // Debug-only CAS put: no building to attach. Prefer
+                        // `arx capture` / `building commit` for domain writes.
+                        let _write_lock = store.try_lock_exclusive().with_context(|| {
+                            format!(
+                                "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
+                                cli.store.display()
+                            )
+                        })?;
+                        store.put(&obj)?
+                    };
                     if quiet {
                         println!("{cid}");
                     } else {
@@ -1067,7 +1062,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                         bail!("root must commit to at least one object (pass --object or --all)");
                     }
 
-                    let mut builder = RootBuilder::new(bid.clone(), crate::util::now_secs()).objects(set);
+                    let mut builder =
+                        RootBuilder::new(bid.clone(), crate::util::now_secs()).objects(set);
                     if let Some(prev) = previous {
                         builder = builder.previous_root(Cid::from_str(&prev)?);
                     }
@@ -1082,13 +1078,16 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             "root author authorization failed (seed must be in Building.controller_keys)"
                         })?;
                     }
-                    let _write_lock = store.try_lock_exclusive().with_context(|| {
-                        format!(
-                            "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
-                            cli.store.display()
-                        )
-                    })?;
-                    store.put(&root_obj)?;
+                    // Debug/interop helper: writes the root through the repository
+                    // lock but does **not** advance the building head. Use
+                    // `arx building commit` for domain commits.
+                    let repo = BuildingRepository::open_or_follow(&cli.store, &bid, None)
+                        .with_context(|| {
+                            format!(
+                                "open building {bid} for root create (store may be locked by another process)"
+                            )
+                        })?;
+                    repo.put_object(&root_obj)?;
                     let root = RootBody::from_object(&root_obj)?;
                     if quiet {
                         println!("{root_cid}");
@@ -1106,8 +1105,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 RootCommands::Show { cid, json } => {
                     let cid = Cid::from_str(&cid)?;
                     let obj = store.get(&cid)?;
-                    let root = RootBody::from_object(&obj)
-                        .context("object is not a root")?;
+                    let root = RootBody::from_object(&obj).context("object is not a root")?;
                     if let Err(e) = root.verify_with_store(&store) {
                         eprintln!("warning: root verification failed: {e}");
                     }
@@ -1179,8 +1177,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     let idx = repo.rebuild_spatial_index()?;
                     println!(
                         "spatial_index_root={}",
-                        idx.map(|c| c.to_string())
-                            .unwrap_or_else(|| "none".into())
+                        idx.map(|c| c.to_string()).unwrap_or_else(|| "none".into())
                     );
                     println!("(use --commit to attach index to a new root)");
                 }
@@ -1196,11 +1193,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 json,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)?;
-                let volume = QueryVolume::from_min_max(
-                    [min_x, min_y, min_z],
-                    [max_x, max_y, max_z],
-                );
+                let repo = BuildingRepository::open_read(&cli.store, &bid)?;
+                let volume =
+                    QueryVolume::from_min_max([min_x, min_y, min_z], [max_x, max_y, max_z]);
                 let hits = repo.query_volume(&volume)?;
                 if json {
                     let v: Vec<_> = hits
@@ -1233,11 +1228,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 limit,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
-                let volume = QueryVolume::from_min_max(
-                    [min_x, min_y, min_z],
-                    [max_x, max_y, max_z],
-                );
+                let mut repo = BuildingRepository::open_read(&cli.store, &bid)?;
+                let volume =
+                    QueryVolume::from_min_max([min_x, min_y, min_z], [max_x, max_y, max_z]);
                 let n = repo.load_region(&volume, limit)?;
                 println!("loaded={n}");
                 println!("cache_len={}", repo.working_set().cache_len());
@@ -1249,7 +1242,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
                 let floor = Cid::from_str(&floor_cid)?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid)?;
+                let mut repo = BuildingRepository::open_read(&cli.store, &bid)?;
                 let n = repo.load_floor(&floor, limit)?;
                 println!("loaded={n}");
                 println!("cache_len={}", repo.working_set().cache_len());
@@ -1297,11 +1290,10 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     include_point_clouds: !no_points,
                     ..UsdExportOptions::default()
                 };
-                let usda = export_building_usda(&cli.store, &bid, &opts)
-                    .with_context(|| "usd export")?;
+                let usda =
+                    export_building_usda(&cli.store, &bid, &opts).with_context(|| "usd export")?;
                 if let Some(path) = out {
-                    fs::write(&path, &usda)
-                        .with_context(|| format!("write {}", path.display()))?;
+                    fs::write(&path, &usda).with_context(|| format!("write {}", path.display()))?;
                     println!("wrote {} bytes to {}", usda.len(), path.display());
                 } else {
                     print!("{usda}");
@@ -1314,11 +1306,10 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
                 let opts = IfcExportOptions { project_name };
-                let ifc = export_building_ifc(&cli.store, &bid, &opts)
-                    .with_context(|| "ifc export")?;
+                let ifc =
+                    export_building_ifc(&cli.store, &bid, &opts).with_context(|| "ifc export")?;
                 if let Some(path) = out {
-                    fs::write(&path, &ifc)
-                        .with_context(|| format!("write {}", path.display()))?;
+                    fs::write(&path, &ifc).with_context(|| format!("write {}", path.display()))?;
                     println!("wrote {} bytes to {}", ifc.len(), path.display());
                 } else {
                     print!("{ifc}");
@@ -1332,14 +1323,14 @@ pub fn run_sync(cli: Cli) -> Result<()> {
         } => {
             // Diagnostic only: type-count points are not a payment basis (ADR-001).
             let bid = BuildingId::from_str(&building_id)?;
-            let repo = BuildingRepository::open(&cli.store, &bid)?;
+            let repo = BuildingRepository::open_read(&cli.store, &bid)?;
             let root_cid = match root {
                 Some(s) => Cid::from_str(&s)?,
                 None => repo
                     .head_root()
                     .ok_or_else(|| anyhow::anyhow!("building has no head root"))?,
             };
-            let report = score_root(repo.store(), &root_cid, &Default::default())?;
+            let report = score_root(&repo, &root_cid, &Default::default())?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -1398,6 +1389,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 None
             };
             let obj = stmt.into_provenance_object(kp.as_ref())?;
+            // Debug-only CAS put of a provenance object (not staged onto a building).
             let _write_lock = store.try_lock_exclusive().with_context(|| {
                 format!(
                     "acquire store write lock on {} (is arx / arxos-edge / another writer running?)",
@@ -1419,8 +1411,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 } else {
                     None
                 };
-                let res = import_usda(&cli.store, &text, kp.as_ref())
-                    .with_context(|| "usd import")?;
+                let res =
+                    import_usda(&cli.store, &text, kp.as_ref()).with_context(|| "usd import")?;
                 println!("building_id={}", res.building_id);
                 println!("objects={}", res.object_cids.len());
                 println!(
@@ -1441,8 +1433,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 } else {
                     None
                 };
-                let res = import_ifc(&cli.store, &text, kp.as_ref())
-                    .with_context(|| "ifc import")?;
+                let res =
+                    import_ifc(&cli.store, &text, kp.as_ref()).with_context(|| "ifc import")?;
                 println!("building_id={}", res.building_id);
                 println!("objects={}", res.object_cids.len());
                 println!(
@@ -1460,4 +1452,3 @@ pub fn run_sync(cli: Cli) -> Result<()> {
 
     Ok(())
 }
-

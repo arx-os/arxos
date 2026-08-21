@@ -1,6 +1,7 @@
 //! In-process multi-node mesh for deterministic tests (no sockets).
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -29,7 +30,6 @@ struct MemoryNodeInner {
 pub struct MemoryNode {
     peer_id: PeerId,
     mesh: MemoryMesh,
-    store: ObjectStore,
 }
 
 impl MemoryMesh {
@@ -39,25 +39,25 @@ impl MemoryMesh {
         }
     }
 
-    /// Register a node serving `store` with optional building ads.
+    /// Register a node serving the CAS at `store_path` with optional building ads.
+    ///
+    /// Opens the filesystem store internally; callers pass a path, not the
+    /// concrete [`ObjectStore`] type.
     pub fn attach(
         &self,
-        store: ObjectStore,
+        store_path: impl AsRef<Path>,
         buildings: Vec<BuildingHeadAd>,
     ) -> Result<MemoryNode> {
+        let store = ObjectStore::open(store_path.as_ref()).map_err(NetError::from)?;
         let peer_id = format!("mem-{:04}", NODE_SEQ.fetch_add(1, Ordering::Relaxed));
         let mut guard = self.inner.lock().map_err(|e| NetError::Transport(e.to_string()))?;
         guard.insert(
             peer_id.clone(),
-            MemoryNodeInner {
-                store: store.clone(),
-                buildings,
-            },
+            MemoryNodeInner { store, buildings },
         );
         Ok(MemoryNode {
             peer_id,
             mesh: self.clone(),
-            store,
         })
     }
 
@@ -79,10 +79,6 @@ impl MemoryMesh {
 impl MemoryNode {
     pub fn peer_id(&self) -> &PeerId {
         &self.peer_id
-    }
-
-    pub fn store(&self) -> &ObjectStore {
-        &self.store
     }
 
     pub fn set_buildings(&self, buildings: Vec<BuildingHeadAd>) -> Result<()> {

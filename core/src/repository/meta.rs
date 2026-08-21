@@ -31,12 +31,13 @@ impl BuildingRepository {
         crate::store::atomic_write(&path, &bytes)
     }
 
-    pub(super) fn read_record(store_root: &Path, building_id: &BuildingId) -> Result<BuildingRecord> {
+    pub(super) fn read_record(
+        store_root: &Path,
+        building_id: &BuildingId,
+    ) -> Result<BuildingRecord> {
         let path = Self::meta_path(store_root, building_id);
         if !path.exists() {
-            return Err(Error::NotFound(format!(
-                "building record {building_id}"
-            )));
+            return Err(Error::NotFound(format!("building record {building_id}")));
         }
         let bytes = fs::read(path)?;
         from_cbor(&bytes)

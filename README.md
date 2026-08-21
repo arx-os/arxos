@@ -23,7 +23,8 @@ sign Roots that advance the head (fail closed).
 
 **Local store.** Objects live under a directory of content-addressed files. A
 small metadata file holds each building’s head pointer. A single-writer lock
-guards concurrent repository writes on the same path.
+guards concurrent repository writes on the same path. Who may read or write the
+CAS is defined in the [store contract](core/README.md#store-contract).
 
 **Sync.** Peers advertise and pull root closures (Iroh QUIC, optional mDNS on
 the LAN). Bytes are verified by CID; adopting a remote head reuses the same

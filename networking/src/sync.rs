@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use arxos_core::object::BuildingId;
-use arxos_core::repository::{AdoptOptions, BuildingRepository, CommitResult};
+use arxos_core::repository::{AdoptOptions, BuildingRepository, CommitResult, ObjectIngest};
 use arxos_core::Cid;
 
 use crate::error::{NetError, Result};
@@ -144,11 +144,10 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     })
 }
 
-/// Write a fetched closure under the exclusive store lock.
+/// Write a fetched closure under the repository's exclusive store lock.
 ///
-/// When a building id is known (adopt path, or a Root in the payload), ingest
-/// and adopt share one [`BuildingRepository`] session. Otherwise a bare
-/// [`WriteGuard`] covers CAS-only puts.
+/// A building id is required (passed in, or parsed from a Root in the payload).
+/// Anonymous CAS puts without a repository are not allowed.
 fn ingest_pulled_blobs(
     store_path: &std::path::Path,
     blobs: &[crate::protocol::ObjectBlob],
@@ -158,63 +157,40 @@ fn ingest_pulled_blobs(
     allow_untrusted: bool,
     metadata_only: bool,
 ) -> Result<(u64, u64, Option<CommitResult>)> {
-    if set_head || building_id.is_some() {
-        let bid = building_id.ok_or_else(|| {
-            NetError::Protocol("could not determine building_id for adopt".into())
-        })?;
-        let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
-        let (stored, skipped) = put_blobs_into_repo(&repo, blobs)?;
-        let adopted = if set_head {
-            let opts = AdoptOptions {
-                allow_untrusted,
-                // Metadata-first pulls intentionally omit blobs; allow partial adopt
-                // only in that mode. Full pulls stay fail-closed.
-                allow_partial: metadata_only,
-            };
-            Some(repo.adopt_root_with_options(root, &opts)?)
-        } else {
-            None
+    let bid = building_id.ok_or_else(|| {
+        NetError::Protocol(
+            "could not determine building_id for ingest (pass building_id or include a Root in the closure)".into(),
+        )
+    })?;
+    let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
+    let (stored, skipped) = put_blobs_into_repo(&repo, blobs)?;
+    let adopted = if set_head {
+        let opts = AdoptOptions {
+            allow_untrusted,
+            // Metadata-first pulls intentionally omit blobs; allow partial adopt
+            // only in that mode. Full pulls stay fail-closed.
+            allow_partial: metadata_only,
         };
-        Ok((stored, skipped, adopted))
+        Some(repo.adopt_root_with_options(root, &opts)?)
     } else {
-        let store = arxos_core::store::ObjectStore::open(store_path)?;
-        let _write_lock = store.try_lock_exclusive()?;
-        let (stored, skipped) = put_blobs_into_store(&store, blobs)?;
-        Ok((stored, skipped, None))
-    }
+        None
+    };
+    Ok((stored, skipped, adopted))
 }
 
-fn put_blobs_into_repo(
-    repo: &BuildingRepository,
+fn put_blobs_into_repo<I: ObjectIngest + ?Sized>(
+    repo: &I,
     blobs: &[crate::protocol::ObjectBlob],
 ) -> Result<(u64, u64)> {
     let mut stored = 0u64;
     let mut skipped = 0u64;
     for blob in blobs {
         let cid = Cid::from_str(&blob.cid).map_err(|e| NetError::Protocol(e.to_string()))?;
-        if repo.contains(&cid) {
+        if repo.has(&cid) {
             skipped += 1;
             continue;
         }
-        repo.put_object_bytes(&blob.bytes)?;
-        stored += 1;
-    }
-    Ok((stored, skipped))
-}
-
-fn put_blobs_into_store(
-    store: &arxos_core::store::ObjectStore,
-    blobs: &[crate::protocol::ObjectBlob],
-) -> Result<(u64, u64)> {
-    let mut stored = 0u64;
-    let mut skipped = 0u64;
-    for blob in blobs {
-        let cid = Cid::from_str(&blob.cid).map_err(|e| NetError::Protocol(e.to_string()))?;
-        if store.contains(&cid) {
-            skipped += 1;
-            continue;
-        }
-        store.put_bytes(&blob.bytes)?;
+        repo.ingest_canonical_bytes(&blob.bytes)?;
         stored += 1;
     }
     Ok((stored, skipped))
@@ -358,7 +334,7 @@ mod tests {
 
         let node_a = mesh
             .attach(
-                repo_a.store().clone(),
+                dir_a.path(),
                 vec![BuildingHeadAd {
                     building_id: bid.to_string(),
                     root_cid: root.clone(),
@@ -375,7 +351,7 @@ mod tests {
                     .unwrap();
         }
         let node_b = mesh
-            .attach(arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(), vec![])
+            .attach(dir_b.path(), vec![])
             .unwrap();
 
         let pull = pull_root(
@@ -435,16 +411,16 @@ mod tests {
         let root = commit.root_cid;
 
         // Retrieve spatial index root CID from committed root body
-        let root_obj = repo_a.store().get(&root).unwrap();
+        let root_obj = repo_a.get_object(&root).unwrap();
         let root_body = arxos_core::root::RootBody::from_object(&root_obj).unwrap();
         let index_root_cid = root_body.spatial_index_root.expect("should have spatial index root");
 
         // Verify that the index root exists in A's store
-        assert!(repo_a.store().contains(&index_root_cid));
+        assert!(repo_a.contains(&index_root_cid));
 
         let node_a = mesh
             .attach(
-                repo_a.store().clone(),
+                dir_a.path(),
                 vec![BuildingHeadAd {
                     building_id: bid.to_string(),
                     root_cid: root.to_string(),
@@ -464,7 +440,7 @@ mod tests {
             .unwrap();
         }
         let node_b = mesh
-            .attach(arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(), vec![])
+            .attach(dir_b.path(), vec![])
             .unwrap();
 
         // 3. Pull root on B
@@ -550,7 +526,7 @@ mod tests {
 
         let node_a = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                dir_a.path(),
                 vec![BuildingHeadAd {
                     building_id: bid.to_string(),
                     root_cid: root.clone(),
@@ -571,7 +547,7 @@ mod tests {
         }
         let node_edge = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_edge.path()).unwrap(),
+                dir_edge.path(),
                 vec![],
             )
             .unwrap();
@@ -602,7 +578,7 @@ mod tests {
 
         let node_b = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                dir_b.path(),
                 vec![],
             )
             .unwrap();
@@ -651,14 +627,14 @@ mod tests {
         // Pull B's tip into A (full), merge
         let node_a2 = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                dir_a.path(),
                 vec![],
             )
             .unwrap();
         // Publish B for pull
         let node_b2 = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                dir_b.path(),
                 vec![BuildingHeadAd {
                     building_id: bid.to_string(),
                     root_cid: tip_b.root_cid.to_string(),
@@ -708,7 +684,7 @@ mod tests {
         let pts = [[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0]];
         let cap = PointCloudCapture::from_xyz(&pts, Pose::default(), None);
         let capture_res = repo_a.capture_point_cloud(&cap).unwrap();
-        let chunk_obj = repo_a.store().get(&capture_res.cid).unwrap();
+        let chunk_obj = repo_a.get_object(&capture_res.cid).unwrap();
         let blob_cid = match chunk_obj.body {
             ObjectBody::PointCloudChunk(b) => b.points_blob.expect("tiered blob"),
             _ => panic!("expected point cloud"),
@@ -719,7 +695,7 @@ mod tests {
 
         let node_a = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_a.path()).unwrap(),
+                dir_a.path(),
                 vec![BuildingHeadAd {
                     building_id: bid.to_string(),
                     root_cid: root.clone(),
@@ -735,7 +711,7 @@ mod tests {
         }
         let node_b = mesh
             .attach(
-                arxos_core::store::ObjectStore::open(dir_b.path()).unwrap(),
+                dir_b.path(),
                 vec![],
             )
             .unwrap();
@@ -787,7 +763,7 @@ mod tests {
             let r = ingest_pulled_blobs(
                 std::path::Path::new(&path),
                 &blobs,
-                None,
+                Some(BuildingId::new()),
                 cid,
                 false,
                 false,

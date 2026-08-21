@@ -11,7 +11,7 @@ use crate::capture::pose_distance;
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectBody, ObjectType, Pose};
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 /// Summary of an annotation for AR overlay without full object bytes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -84,7 +84,11 @@ impl WorkingSet {
     }
 
     /// Materialize an object from the store into the cache.
-    pub fn materialize(&mut self, store: &ObjectStore, cid: &Cid) -> Result<&Object> {
+    pub fn materialize<R: ObjectRead + ?Sized>(
+        &mut self,
+        store: &R,
+        cid: &Cid,
+    ) -> Result<&Object> {
         if !self.cache.contains_key(cid) {
             let obj = store.get(cid)?;
             self.insert_cache(*cid, obj);
@@ -129,9 +133,9 @@ impl WorkingSet {
     }
 
     /// Find annotations near a pose within `radius_m` among cached + optional store CIDs.
-    pub fn annotations_near(
+    pub fn annotations_near<R: ObjectRead + ?Sized>(
         &mut self,
-        store: &ObjectStore,
+        store: &R,
         origin: &Pose,
         radius_m: f64,
         candidate_cids: impl IntoIterator<Item = Cid>,
@@ -185,6 +189,7 @@ mod tests {
     use super::*;
     use crate::capture::{annotation_object, AnnotationCapture};
     use crate::object::Pose;
+    use crate::store::ObjectStore;
     use tempfile::tempdir;
 
     #[test]

@@ -3,13 +3,13 @@
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Aabb, ObjectBody};
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 use super::super::{QueryVolume, SpatialHit};
 use super::{entry_from_object, SpatialEntry};
 
-pub fn query_index(
-    store: &ObjectStore,
+pub fn query_index<R: ObjectRead + ?Sized>(
+    store: &R,
     index_root: &Cid,
     volume: &QueryVolume,
 ) -> Result<Vec<SpatialHit>> {
@@ -46,8 +46,8 @@ pub fn query_index(
 }
 
 /// Query and refine hits by loading each object and testing its true bounds.
-pub fn query_index_refined(
-    store: &ObjectStore,
+pub fn query_index_refined<R: ObjectRead + ?Sized>(
+    store: &R,
     index_root: &Cid,
     volume: &QueryVolume,
 ) -> Result<Vec<SpatialHit>> {

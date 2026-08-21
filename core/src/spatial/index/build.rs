@@ -2,7 +2,7 @@
 
 use crate::cid::Cid;
 use crate::error::{Error, Result};
-use crate::store::ObjectStore;
+use crate::store::ObjectWrite;
 
 use super::super::aabb::union_all;
 use super::{
@@ -10,7 +10,10 @@ use super::{
     MAX_DEPTH,
 };
 
-pub fn build_index(store: &ObjectStore, mut entries: Vec<SpatialEntry>) -> Result<Option<Cid>> {
+pub fn build_index<W: ObjectWrite + ?Sized>(
+    store: &W,
+    mut entries: Vec<SpatialEntry>,
+) -> Result<Option<Cid>> {
     if entries.is_empty() {
         return Ok(None);
     }
@@ -20,7 +23,11 @@ pub fn build_index(store: &ObjectStore, mut entries: Vec<SpatialEntry>) -> Resul
     Ok(Some(root))
 }
 
-fn build_recursive(store: &ObjectStore, entries: Vec<SpatialEntry>, depth: usize) -> Result<Cid> {
+fn build_recursive<W: ObjectWrite + ?Sized>(
+    store: &W,
+    entries: Vec<SpatialEntry>,
+    depth: usize,
+) -> Result<Cid> {
     let bounds = union_all(entries.iter().map(|e| e.bounds.clone())).ok_or_else(|| {
         Error::Validation("empty entries in spatial index node".into())
     })?;

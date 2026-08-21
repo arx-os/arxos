@@ -16,12 +16,18 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Object operations
+    /// Low-level object CAS (debug)
+    ///
+    /// `object put` is a debug CAS operation and does not stage or update a
+    /// building head. Prefer `capture` + `building commit`.
     Object {
         #[command(subcommand)]
         command: ObjectCommands,
     },
-    /// Root (repository state) operations
+    /// Low-level root CAS (debug)
+    ///
+    /// `root create` writes a signed root but does not update the building head.
+    /// Prefer `building commit`.
     Root {
         #[command(subcommand)]
         command: RootCommands,
@@ -87,7 +93,10 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Create a mock device attestation provenance object for a root
+    /// Debug CAS operation: write a mock attestation provenance object
+    ///
+    /// Does not stage objects or update the building head. Prefer
+    /// `BuildingRepository` / capture + commit for building data.
     Attest {
         /// Subject root CID
         root: String,
@@ -434,7 +443,11 @@ pub enum CaptureCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum ObjectCommands {
-    /// Write an object into the store
+    /// Debug CAS operation: write an object into the store
+    ///
+    /// Does not stage objects or update the building head. Prefer `capture` +
+    /// `building commit`. Without `--building-id` this is a bare CAS put (no
+    /// building attached).
     Put {
         /// Object type (blob, annotation, building, …)
         #[arg(long, default_value = "blob")]
@@ -487,7 +500,10 @@ pub enum ObjectCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum RootCommands {
-    /// Create a signed root committing to a set of object CIDs
+    /// Debug CAS operation: write a signed root object
+    ///
+    /// Does not stage objects or update the building head. Prefer
+    /// `building commit`.
     Create {
         /// Building ID
         #[arg(long)]

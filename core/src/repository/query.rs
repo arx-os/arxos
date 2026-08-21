@@ -109,11 +109,17 @@ impl BuildingRepository {
     }
 
     /// Merge another root into this repository (same building_id), adopt result as head.
+    ///
+    /// This is the domain writer for merges: [`crate::merge::merge_roots`] still
+    /// exists as a store-level helper (tests), but building-scoped callers must
+    /// go through the repository so the exclusive lock and head pointer stay
+    /// consistent.
     pub fn merge_root(
         &mut self,
         other_root: Cid,
         message: Option<String>,
     ) -> Result<crate::merge::MergeResult> {
+        self.require_write()?;
         let kp = self
             .keypair
             .as_ref()
@@ -122,8 +128,7 @@ impl BuildingRepository {
             .record
             .head_root
             .ok_or_else(|| Error::Validation("no local head to merge into".into()))?;
-        let result =
-            crate::merge::merge_roots(&self.store, head, other_root, kp, message, true)?;
+        let result = crate::merge::merge_roots(&self.store, head, other_root, kp, message, true)?;
         self.adopt_root(result.root_cid)?;
         Ok(result)
     }
@@ -141,5 +146,4 @@ impl BuildingRepository {
         self.working_set
             .annotations_near(&self.store, origin, radius_m, candidates)
     }
-
 }

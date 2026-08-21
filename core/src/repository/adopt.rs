@@ -20,6 +20,7 @@ impl BuildingRepository {
         root_cid: Cid,
         opts: &AdoptOptions,
     ) -> Result<CommitResult> {
+        self.require_write()?;
         let obj = self.store.get(&root_cid)?;
         let root = RootBody::from_object(&obj)?.clone();
         if root.building_id != self.record.building_id {
@@ -35,8 +36,7 @@ impl BuildingRepository {
         if !opts.allow_partial {
             let missing = crate::root::missing_active_objects(&self.store, &active_set)?;
             if !missing.is_empty() {
-                let preview: Vec<String> =
-                    missing.iter().take(8).map(|c| c.to_string()).collect();
+                let preview: Vec<String> = missing.iter().take(8).map(|c| c.to_string()).collect();
                 return Err(Error::NotFound(format!(
                     "incomplete root for adopt: missing {} active object(s), e.g. {}",
                     missing.len(),
@@ -55,9 +55,9 @@ impl BuildingRepository {
         if !opts.allow_untrusted {
             // Fail closed: valid signatures AND authors ∈ Building.controller_keys.
             root.verify_with_store(&self.store).map_err(|e| match e {
-                Error::Authorization(msg) => Error::Authorization(format!(
-                    "root author authorization failed: {msg}"
-                )),
+                Error::Authorization(msg) => {
+                    Error::Authorization(format!("root author authorization failed: {msg}"))
+                }
                 Error::Signature(msg) => {
                     Error::Signature(format!("root author verification failed: {msg}"))
                 }
@@ -90,5 +90,4 @@ impl BuildingRepository {
             previous_root: previous,
         })
     }
-
 }

@@ -12,7 +12,7 @@ use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::Object;
 use crate::root::RootBody;
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 /// Severity of a verification finding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,8 +107,8 @@ pub fn verify_object_canonicalization(obj: &Object) -> Result<VerificationReport
 }
 
 /// Verify a root object and optional transition from `previous`.
-pub fn verify_root_transition(
-    store: &ObjectStore,
+pub fn verify_root_transition<R: ObjectRead + ?Sized>(
+    store: &R,
     root_cid: &Cid,
 ) -> Result<VerificationReport> {
     let mut report = VerificationReport::pass();
@@ -148,7 +148,7 @@ pub fn verify_root_transition(
     let mut missing = 0u64;
     let active = root.materialize_active_objects(store)?;
     for cid in &active {
-        if !store.contains(cid) {
+        if !store.has(cid) {
             missing += 1;
         }
     }
@@ -219,7 +219,7 @@ pub fn verify_root_transition(
     }
 
     if let Some(si) = root.spatial_index_root {
-        if !store.contains(&si) {
+        if !store.has(&si) {
             report.push(
                 Severity::Warning,
                 "SPATIAL_MISSING",
@@ -231,7 +231,11 @@ pub fn verify_root_transition(
     Ok(report)
 }
 
-fn detect_root_cycle(store: &ObjectStore, start: &Cid, max_depth: usize) -> Result<()> {
+fn detect_root_cycle<R: ObjectRead + ?Sized>(
+    store: &R,
+    start: &Cid,
+    max_depth: usize,
+) -> Result<()> {
     let mut seen = BTreeSet::new();
     let mut cur = Some(*start);
     let mut depth = 0;
@@ -306,7 +310,7 @@ mod tests {
         ))
         .unwrap();
         let c2 = repo.commit(Some("2".into())).unwrap();
-        let report = verify_root_transition(repo.store(), &c2.root_cid).unwrap();
+        let report = verify_root_transition(&repo, &c2.root_cid).unwrap();
         assert!(report.ok, "{:?}", report.findings);
         assert_eq!(c2.previous_root, Some(c1.root_cid));
     }

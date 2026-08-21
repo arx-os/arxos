@@ -1,11 +1,11 @@
 //! Bounded root object closures for sync (checkpoint-limited history).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectBody};
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 use super::RootBody;
 
@@ -43,14 +43,17 @@ pub struct ClosureResult {
 /// up to the nearest checkpoint root in history.
 ///
 /// Fail closed: any missing active object or spatial-index node is an error.
-pub fn get_root_closure_blobs(store: &ObjectStore, root_cid: &Cid) -> Result<Vec<(Cid, Vec<u8>)>> {
+pub fn get_root_closure_blobs<R: ObjectRead + ?Sized>(
+    store: &R,
+    root_cid: &Cid,
+) -> Result<Vec<(Cid, Vec<u8>)>> {
     let result = get_root_closure_blobs_with_options(store, root_cid, &ClosureOptions::default())?;
     Ok(result.blobs)
 }
 
 /// Like [`get_root_closure_blobs`], with control over partial closures.
-pub fn get_root_closure_blobs_with_options(
-    store: &ObjectStore,
+pub fn get_root_closure_blobs_with_options<R: ObjectRead + ?Sized>(
+    store: &R,
     root_cid: &Cid,
     opts: &ClosureOptions,
 ) -> Result<ClosureResult> {
@@ -212,14 +215,90 @@ fn referenced_blob_cids(obj: &Object) -> Vec<Cid> {
 /// Ensure every CID in `active` is present in `store`.
 ///
 /// Returns the list of missing CIDs (empty when complete).
-pub fn missing_active_objects(store: &ObjectStore, active: &BTreeSet<Cid>) -> Result<Vec<Cid>> {
+pub fn missing_active_objects<R: ObjectRead + ?Sized>(
+    store: &R,
+    active: &BTreeSet<Cid>,
+) -> Result<Vec<Cid>> {
     let mut missing = Vec::new();
     for cid in active {
-        if !store.contains(cid) {
+        if !store.has(cid) {
             missing.push(*cid);
         }
     }
     Ok(missing)
+}
+
+/// Closed, ordered object graph for one root (checkpoint-bounded).
+///
+/// Collect once from a live [`ObjectRead`], then export/verify against
+/// [`ClosureView`] without holding the store.
+pub struct RootClosure {
+    pub root_cid: Cid,
+    pub result: ClosureResult,
+}
+
+impl RootClosure {
+    /// Walk the store and snapshot the root closure.
+    pub fn collect<R: ObjectRead + ?Sized>(
+        store: &R,
+        root_cid: &Cid,
+        opts: &ClosureOptions,
+    ) -> Result<Self> {
+        let result = get_root_closure_blobs_with_options(store, root_cid, opts)?;
+        Ok(Self {
+            root_cid: *root_cid,
+            result,
+        })
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.result.missing.is_empty()
+    }
+
+    /// Read from the snapshot only (no further CAS I/O).
+    pub fn as_read(&self) -> ClosureView<'_> {
+        ClosureView::from_blobs(&self.result.blobs)
+    }
+}
+
+/// [`ObjectRead`] over a collected closure. `get` re-checks CID integrity.
+pub struct ClosureView<'a> {
+    map: BTreeMap<Cid, &'a [u8]>,
+}
+
+impl<'a> ClosureView<'a> {
+    pub fn from_blobs(blobs: &'a [(Cid, Vec<u8>)]) -> Self {
+        let mut map = BTreeMap::new();
+        for (cid, bytes) in blobs {
+            map.insert(*cid, bytes.as_slice());
+        }
+        Self { map }
+    }
+}
+
+impl ObjectRead for ClosureView<'_> {
+    fn has(&self, cid: &Cid) -> bool {
+        self.map.contains_key(cid)
+    }
+
+    fn get(&self, cid: &Cid) -> Result<Object> {
+        let bytes = self.get_bytes(cid)?;
+        let object = Object::from_canonical_bytes(&bytes)?;
+        let actual = object.cid()?;
+        if actual != *cid {
+            return Err(Error::Store(format!(
+                "CID mismatch: expected {cid}, got {actual}"
+            )));
+        }
+        Ok(object)
+    }
+
+    fn get_bytes(&self, cid: &Cid) -> Result<Vec<u8>> {
+        self.map
+            .get(cid)
+            .map(|b| b.to_vec())
+            .ok_or_else(|| Error::NotFound(cid.to_string()))
+    }
 }
 
 #[cfg(test)]
@@ -228,6 +307,7 @@ mod tests {
     use crate::crypto::Keypair;
     use crate::object::{BuildingBody, BuildingId, Object};
     use crate::root::RootBuilder;
+    use crate::store::ObjectStore;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 

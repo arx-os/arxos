@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::cid::Cid;
 use crate::error::Result;
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 use super::RootBody;
 
@@ -20,7 +20,10 @@ pub fn is_checkpoint_body(root: &RootBody) -> bool {
 /// non-checkpoint roots until a checkpoint (or chain end / cycle) is hit.
 ///
 /// Does not count the checkpoint itself. Broken / missing links stop the walk.
-pub fn distance_from_checkpoint(store: &ObjectStore, start: Option<Cid>) -> Result<u32> {
+pub fn distance_from_checkpoint<R: ObjectRead + ?Sized>(
+    store: &R,
+    start: Option<Cid>,
+) -> Result<u32> {
     let Some(mut current) = start else {
         return Ok(0);
     };
@@ -60,7 +63,10 @@ pub fn should_emit_checkpoint(previous: Option<Cid>, distance: u32) -> bool {
 }
 
 /// Convenience: compute distance and decide whether to checkpoint.
-pub fn should_checkpoint_at(store: &ObjectStore, previous: Option<Cid>) -> Result<bool> {
+pub fn should_checkpoint_at<R: ObjectRead + ?Sized>(
+    store: &R,
+    previous: Option<Cid>,
+) -> Result<bool> {
     let dist = distance_from_checkpoint(store, previous)?;
     Ok(should_emit_checkpoint(previous, dist))
 }

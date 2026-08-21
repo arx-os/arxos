@@ -20,17 +20,17 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use crate::capture::{
-    annotation_object, maybe_sign, put_point_cloud_chunk, space_object, AnnotationCapture,
-    PointCloudCapture, SpaceCapture,
-};
 use crate::canonical::from_cbor;
+use crate::capture::{
+    annotation_object, maybe_sign, put_mesh, put_point_cloud_chunk, space_object,
+    AnnotationCapture, MeshCapture, PointCloudCapture, SpaceCapture,
+};
 use crate::cid::Cid;
 use crate::crypto::{Keypair, PublicKey};
 use crate::error::{Error, Result};
 use crate::object::{BuildingBody, BuildingId, Object, ObjectBody, ObjectType};
 use crate::root::{RootBody, RootBuilder};
-use crate::store::ObjectStore;
+use crate::store::{ObjectRead, ObjectStore, ObjectWrite};
 use crate::working_set::WorkingSet;
 
 fn now_secs() -> u64 {
@@ -85,14 +85,27 @@ pub struct AdoptOptions {
     pub allow_partial: bool,
 }
 
+/// Building-scoped ingest of already-canonical objects (sync / import).
+///
+/// Does **not** stage into pending captures. The caller adopts or commits
+/// afterwards. Presence checks use [`ObjectRead::has`].
+pub trait ObjectIngest: ObjectRead {
+    /// Store exact wire bytes (fail closed if non-canonical).
+    fn ingest_canonical_bytes(&self, bytes: &[u8]) -> Result<Cid>;
+}
+
 /// Building repository handle: CAS + head metadata + session working set.
 ///
-/// Holds an exclusive [`crate::store::WriteGuard`] for the store for the
-/// lifetime of the repository (single-writer policy).
+/// Write opens ([`Self::init`], [`Self::open`], [`Self::open_or_follow`]) hold
+/// an exclusive [`crate::store::WriteGuard`] for the handle lifetime
+/// (single-writer policy). [`Self::open_read`] takes no flock so score,
+/// verify, and export can run while a writer is not (or even is) holding
+/// the lock — see rustdoc on [`Self::open_read`] for consistency caveats.
 pub struct BuildingRepository {
     store: ObjectStore,
-    /// Exclusive store lock — released on drop.
-    _write_lock: crate::store::WriteGuard,
+    /// Exclusive store lock when this handle may write. `None` for
+    /// [`Self::open_read`].
+    _write_lock: Option<crate::store::WriteGuard>,
     record: BuildingRecord,
     working_set: WorkingSet,
     keypair: Option<Keypair>,
@@ -169,7 +182,7 @@ impl BuildingRepository {
 
         Ok(Self {
             store,
-            _write_lock: write_lock,
+            _write_lock: Some(write_lock),
             record,
             working_set,
             keypair: Some(kp),
@@ -177,16 +190,45 @@ impl BuildingRepository {
         })
     }
 
-    /// Open an existing building by ID (loads head metadata + optional seed).
+    /// Open an existing building by ID for mutation (exclusive store lock).
+    ///
+    /// Fails immediately if another process holds [`crate::store::WriteGuard`].
+    /// For score / verify / export, use [`Self::open_read`].
     pub fn open(store_path: impl AsRef<Path>, building_id: &BuildingId) -> Result<Self> {
+        Self::open_with_lock(store_path, building_id, true)
+    }
+
+    /// Open an existing building for read-only use (no flock).
+    ///
+    /// Concurrent [`Self::open_read`] handles are allowed. An exclusive writer
+    /// ([`Self::open`]) is **not** blocked by readers, and readers are **not**
+    /// blocked by a writer. Object files and head metadata are written
+    /// atomically (temp + rename), so a reader sees a consistent object or
+    /// a consistent `BuildingRecord`, but the pair can be slightly stale if
+    /// a commit races the read (TOCTOU on the head pointer).
+    ///
+    /// Mutating methods return [`Error::Store`] on this handle.
+    pub fn open_read(store_path: impl AsRef<Path>, building_id: &BuildingId) -> Result<Self> {
+        Self::open_with_lock(store_path, building_id, false)
+    }
+
+    fn open_with_lock(
+        store_path: impl AsRef<Path>,
+        building_id: &BuildingId,
+        exclusive: bool,
+    ) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
-        let write_lock = store.try_lock_exclusive()?;
+        let write_lock = if exclusive {
+            Some(store.try_lock_exclusive()?)
+        } else {
+            None
+        };
         let record = Self::read_record(store.root(), building_id)?;
         let keypair = Self::read_seed(store.root()).ok();
         let mut working_set = WorkingSet::new();
         let mut active_objects = BTreeSet::new();
 
-        // Phase 3: partial by default — pin head root + building only.
+        // Partial by default — pin head root + building only.
         // Domain objects load via load_region / annotations_near / explicit get.
         // Fail closed if head exists but materialization fails (e.g. missing checkpoint).
         if let Some(head) = record.head_root {
@@ -243,8 +285,24 @@ impl BuildingRepository {
         Ok(out)
     }
 
-    pub fn store(&self) -> &ObjectStore {
-        &self.store
+    /// Load a typed object by CID (CID integrity check).
+    pub fn get_object(&self, cid: &Cid) -> Result<Object> {
+        self.store.get(cid)
+    }
+
+    /// True when opened with [`Self::open_read`] (no exclusive store lock).
+    pub fn is_read_only(&self) -> bool {
+        self._write_lock.is_none()
+    }
+
+    fn require_write(&self) -> Result<()> {
+        if self._write_lock.is_none() {
+            return Err(Error::Store(
+                "read-only BuildingRepository (opened with open_read); use BuildingRepository::open for writes"
+                    .into(),
+            ));
+        }
+        Ok(())
     }
 
     pub fn record(&self) -> &BuildingRecord {
@@ -281,10 +339,27 @@ impl BuildingRepository {
     ///
     /// Also stages the blob CID into pending so it is included in the next root.
     pub fn capture_point_cloud(&mut self, capture: &PointCloudCapture) -> Result<CaptureResult> {
-        let obj = put_point_cloud_chunk(&self.store, capture)?;
+        let obj = put_point_cloud_chunk(&*self, capture)?;
         // Ensure the blob is part of the active set (referenced + present).
         if let ObjectBody::PointCloudChunk(ref b) = obj.body {
             if let Some(blob_cid) = b.points_blob {
+                if let Ok(blob_obj) = self.store.get(&blob_cid) {
+                    self.working_set.stage(blob_cid, blob_obj);
+                    self.record.pending.insert(blob_cid);
+                }
+            }
+        }
+        let obj = maybe_sign(obj, self.keypair.as_ref())?;
+        self.put_staged(obj)
+    }
+
+    /// Capture a mesh → tier vertex/index blobs → put → stage.
+    ///
+    /// Also stages blob CIDs into pending so they are included in the next root.
+    pub fn capture_mesh(&mut self, capture: &MeshCapture) -> Result<CaptureResult> {
+        let obj = put_mesh(&*self, capture)?;
+        if let ObjectBody::Mesh(ref b) = obj.body {
+            for blob_cid in [b.vertices_blob, b.indices_blob].into_iter().flatten() {
                 if let Ok(blob_obj) = self.store.get(&blob_cid) {
                     self.working_set.stage(blob_cid, blob_obj);
                     self.record.pending.insert(blob_cid);
@@ -311,6 +386,7 @@ impl BuildingRepository {
     /// The object remains in the CAS (content-addressed history); it is dropped
     /// from the active set via the root `removed` delta.
     pub fn remove_object(&mut self, cid: Cid) -> Result<()> {
+        self.require_write()?;
         self.record.pending.remove(&cid);
         self.working_set.unstaged(&cid);
         self.record.pending_removes.insert(cid);
@@ -323,8 +399,7 @@ impl BuildingRepository {
     pub fn remove_entity(&mut self, entity_id: &crate::entity::EntityId) -> Result<u64> {
         let mut candidates = self.active_objects.clone();
         candidates.extend(self.record.pending.iter().copied());
-        let versions =
-            crate::entity::find_entity_versions(&self.store, &candidates, entity_id)?;
+        let versions = crate::entity::find_entity_versions(&self.store, &candidates, entity_id)?;
         let n = versions.len() as u64;
         for cid in versions {
             self.remove_object(cid)?;
@@ -492,6 +567,7 @@ impl BuildingRepository {
     }
 
     fn put_staged(&mut self, obj: Object) -> Result<CaptureResult> {
+        self.require_write()?;
         let object_type = obj.header.object_type;
         let cid = self.store.put(&obj)?;
         // If this is a new version of an existing entity, clear any staged remove
@@ -506,6 +582,7 @@ impl BuildingRepository {
 
     /// Rebuild spatial index for current head object set (does not create a new root).
     pub fn rebuild_spatial_index(&mut self) -> Result<Option<Cid>> {
+        self.require_write()?;
         let cids = self.head_object_cids()?;
         let entries = crate::spatial::collect_entries(&self.store, cids)?;
         let index_root = crate::spatial::build_index(&self.store, entries)?;
@@ -537,13 +614,21 @@ impl BuildingRepository {
         BuildingId::from_str(s)
     }
 
-    /// Put a typed object into the CAS while this repository holds the write lock.
+    /// Ingest a typed object into the CAS (does not stage for commit).
+    ///
+    /// Use [`Self::stage_captured_object`] or capture methods for pending
+    /// domain objects. Sync and import use this to place objects that a
+    /// subsequent [`Self::adopt_root`] will reference.
     pub fn put_object(&self, obj: &Object) -> Result<Cid> {
+        self.require_write()?;
         self.store.put(obj)
     }
 
-    /// Put raw object bytes into the CAS (used by network sync).
+    /// Ingest already-canonical object bytes (network sync / import).
+    ///
+    /// Does not stage. See [`ObjectIngest`].
     pub fn put_object_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        self.require_write()?;
         self.store.put_bytes(bytes)
     }
 
@@ -563,7 +648,6 @@ impl BuildingRepository {
     pub fn root_closure_bytes(&self, root_cid: &Cid) -> Result<Vec<(Cid, Vec<u8>)>> {
         crate::root::get_root_closure_blobs(&self.store, root_cid)
     }
-
 
     /// Create or open a building record that will follow a remote building id
     /// (no local key required until the device wants to author new roots).
@@ -595,7 +679,7 @@ impl BuildingRepository {
                 let keypair = Self::read_seed(store.root()).ok();
                 Ok(Self {
                     store,
-                    _write_lock: write_lock,
+                    _write_lock: Some(write_lock),
                     record,
                     working_set: WorkingSet::new(),
                     keypair,
@@ -604,6 +688,36 @@ impl BuildingRepository {
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+impl ObjectRead for BuildingRepository {
+    fn has(&self, cid: &Cid) -> bool {
+        self.store.contains(cid)
+    }
+
+    fn get(&self, cid: &Cid) -> Result<Object> {
+        ObjectStore::get(&self.store, cid)
+    }
+
+    fn get_bytes(&self, cid: &Cid) -> Result<Vec<u8>> {
+        ObjectStore::get_bytes(&self.store, cid)
+    }
+}
+
+impl ObjectWrite for BuildingRepository {
+    fn put(&self, object: &Object) -> Result<Cid> {
+        self.put_object(object)
+    }
+
+    fn put_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        self.put_object_bytes(bytes)
+    }
+}
+
+impl ObjectIngest for BuildingRepository {
+    fn ingest_canonical_bytes(&self, bytes: &[u8]) -> Result<Cid> {
+        self.put_object_bytes(bytes)
     }
 }
 
@@ -663,7 +777,7 @@ mod tests {
         }
         let _ = commit;
         // Entity id preserved on the new head object.
-        let obj = repo.store().get(&r2.cid).unwrap();
+        let obj = repo.get_object(&r2.cid).unwrap();
         assert_eq!(entity_id_of(&obj).map(|e| e.as_str()), Some(eid.as_str()));
     }
 
@@ -691,6 +805,79 @@ mod tests {
     }
 
     #[test]
+    fn open_read_skips_exclusive_lock_and_rejects_writes() {
+        if std::env::var_os("ARXOS_OPEN_READ_CHILD").is_some() {
+            let path = std::env::var("ARXOS_LOCK_PATH").expect("ARXOS_LOCK_PATH");
+            let bid =
+                BuildingId::from_str(&std::env::var("ARXOS_BID").expect("ARXOS_BID")).unwrap();
+            let read_ok = BuildingRepository::open_read(&path, &bid).is_ok();
+            let write_blocked = BuildingRepository::open(&path, &bid).is_err();
+            std::process::exit(if read_ok && write_blocked { 0 } else { 1 });
+        }
+
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let mut writer = BuildingRepository::init(path, Some("RO".into()), None).unwrap();
+        let bid = writer.building_id().clone();
+        writer
+            .capture_annotation(&AnnotationCapture::new("n", Pose::default()))
+            .unwrap();
+        writer.commit(Some("c".into())).unwrap();
+
+        // Same-process readers must not take or wait on the exclusive flock.
+        let ro_while_writer = BuildingRepository::open_read(path, &bid).unwrap();
+        assert!(ro_while_writer.is_read_only());
+        assert!(ro_while_writer.head_root().is_some());
+
+        let exe = std::env::current_exe().expect("current_exe");
+        let status = std::process::Command::new(exe)
+            .arg("--exact")
+            .arg("repository::tests::open_read_skips_exclusive_lock_and_rejects_writes")
+            .env("ARXOS_OPEN_READ_CHILD", "1")
+            .env("ARXOS_LOCK_PATH", path)
+            .env("ARXOS_BID", bid.to_string())
+            .status()
+            .expect("spawn open_read probe");
+        assert!(
+            status.success(),
+            "open_read must succeed and exclusive open must fail while a writer holds store.lock; {status}"
+        );
+
+        drop(writer);
+        let ro = BuildingRepository::open_read(path, &bid).unwrap();
+        assert!(ro.is_read_only());
+        assert!(ro.head_root().is_some());
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(crate::object::BlobBody {
+                content_type: None,
+                data: b"x".to_vec(),
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let err = ro.put_object(&obj).unwrap_err();
+        assert!(
+            matches!(err, Error::Store(ref m) if m.contains("read-only")),
+            "{err:?}"
+        );
+        let commit_err = {
+            let mut ro_mut = BuildingRepository::open_read(path, &bid).unwrap();
+            ro_mut.commit(Some("should fail".into())).unwrap_err()
+        };
+        assert!(
+            matches!(commit_err, Error::Store(ref m) if m.contains("read-only")),
+            "{commit_err:?}"
+        );
+
+        let ro2 = BuildingRepository::open_read(path, &bid).unwrap();
+        let mut w2 = BuildingRepository::open(path, &bid).unwrap();
+        assert!(!w2.is_read_only());
+        w2.capture_annotation(&AnnotationCapture::new("n2", Pose::default()))
+            .unwrap();
+        let _ = ro2.get_object(&ro2.record().building_object.unwrap());
+    }
+
+    #[test]
     fn init_capture_commit_reload() {
         let dir = tempdir().unwrap();
         let path = dir.path();
@@ -700,7 +887,7 @@ mod tests {
         let head0 = repo.head_root().unwrap();
 
         repo.capture_space(&SpaceCapture {
-                    entity_id: None,
+            entity_id: None,
             name: Some("Mech Room".into()),
             pose: Pose {
                 position: [2.0, 0.0, 1.0],
@@ -712,13 +899,14 @@ mod tests {
         })
         .unwrap();
 
-        let pts = [[0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 0.0, 1.0], [0.0, 0.0, 1.0]];
-        repo.capture_point_cloud(&PointCloudCapture::from_xyz(
-            &pts,
-            Pose::default(),
-            None,
-        ))
-        .unwrap();
+        let pts = [
+            [0.0f32, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+        ];
+        repo.capture_point_cloud(&PointCloudCapture::from_xyz(&pts, Pose::default(), None))
+            .unwrap();
 
         repo.capture_annotation(&AnnotationCapture::new(
             "disconnect switch",
@@ -817,7 +1005,7 @@ mod tests {
             .message("signed commit")
             .build_signed(controller)
             .unwrap();
-        repo.store().put(&root_obj).unwrap();
+        repo.put_object(&root_obj).unwrap();
         assert!(repo.adopt_root(signed_root_cid).is_ok());
 
         // 2. Valid signature from a non-controller — rejected under default options.
@@ -827,7 +1015,7 @@ mod tests {
             .message("outsider")
             .build_signed(&outsider)
             .unwrap();
-        repo.store().put(&bad_obj).unwrap();
+        repo.put_object(&bad_obj).unwrap();
         let err = repo.adopt_root(bad_cid).unwrap_err();
         assert!(
             matches!(err, Error::Authorization(_)),
@@ -837,7 +1025,7 @@ mod tests {
         // 3. Unsigned root — rejected by default.
         let body = RootBody::new(bid.clone(), Some(signed_root_cid), objects, 102);
         let obj = body.into_object(102);
-        let unsigned_root_cid = repo.store().put(&obj).unwrap();
+        let unsigned_root_cid = repo.put_object(&obj).unwrap();
         let err = repo.adopt_root(unsigned_root_cid);
         assert!(err.is_err());
         assert!(matches!(err.unwrap_err(), Error::Signature(_)));
@@ -872,7 +1060,7 @@ mod tests {
             .message("incomplete")
             .build_signed(controller)
             .unwrap();
-        repo.store().put(&root_obj).unwrap();
+        repo.put_object(&root_obj).unwrap();
 
         let err = repo.adopt_root(root_cid).unwrap_err();
         assert!(

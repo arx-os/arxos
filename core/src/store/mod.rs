@@ -1,5 +1,10 @@
 //! Local content-addressed object store (Git-style fan-out).
 
+mod memory;
+mod traits;
+pub use memory::MemObjectStore;
+pub use traits::{ObjectRead, ObjectWrite};
+
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -94,6 +99,8 @@ pub struct WriteGuard {
 ///
 /// Read-only opens (`open`) do not take the lock. Writers should call
 /// [`try_lock_exclusive`] and hold the guard for the write session.
+/// Building-scoped readers should use [`crate::BuildingRepository::open_read`]
+/// rather than taking a [`WriteGuard`].
 #[derive(Debug, Clone)]
 pub struct ObjectStore {
     root: PathBuf,
@@ -551,6 +558,32 @@ mod tests {
                 Error::Deserialization(_) | Error::Validation(_) | Error::Schema(_)
             ),
             "{err:?}"
+        );
+    }
+
+    fn accepts_read<R: ObjectRead + ?Sized>(store: &R, cid: &Cid) -> bool {
+        store.has(cid)
+    }
+
+    #[test]
+    fn object_read_bound_accepts_object_store() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: Some("application/octet-stream".into()),
+                data: vec![9, 8, 7],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let cid = store.put(&obj).unwrap();
+        assert!(accepts_read(&store, &cid));
+        let via_trait: &dyn ObjectRead = &store;
+        assert_eq!(via_trait.get(&cid).unwrap(), obj);
+        assert_eq!(
+            via_trait.get_bytes(&cid).unwrap(),
+            obj.to_canonical_bytes().unwrap()
         );
     }
 }

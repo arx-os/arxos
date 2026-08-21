@@ -15,7 +15,7 @@ use crate::object::{
     Aabb, AnnotationBody, BlobBody, MeshBody, Object, ObjectBody, PointCloudChunkBody, Pose,
     SpaceBody,
 };
-use crate::store::ObjectStore;
+use crate::store::{ObjectRead, ObjectWrite};
 
 fn now_secs() -> u64 {
     SystemTime::now()
@@ -99,10 +99,7 @@ impl AnnotationCapture {
 /// Always stamps an [`EntityId`] (generated when the capture omits one) so
 /// subsequent pose/property updates can supersede this version on commit/merge.
 pub fn space_object(capture: &SpaceCapture) -> Object {
-    let entity_id = capture
-        .entity_id
-        .clone()
-        .unwrap_or_else(EntityId::new);
+    let entity_id = capture.entity_id.clone().unwrap_or_else(EntityId::new);
     Object::new_with_created(
         ObjectBody::Space(SpaceBody {
             entity_id: Some(entity_id),
@@ -142,8 +139,12 @@ pub fn point_cloud_object(capture: &PointCloudCapture) -> Object {
 ///
 /// The blob is stored first; the returned object references it via `points_blob`
 /// and keeps `points` empty.
-pub fn put_point_cloud_chunk(
-    store: &ObjectStore,
+///
+/// Production callers should pass a [`crate::repository::BuildingRepository`]
+/// (it implements [`ObjectWrite`]) so the write is covered by the repository
+/// lock. Domain staging of the chunk (and blob) is the repository's job.
+pub fn put_point_cloud_chunk<W: ObjectWrite + ?Sized>(
+    store: &W,
     capture: &PointCloudCapture,
 ) -> Result<Object> {
     let mut blob_props = BTreeMap::new();
@@ -179,8 +180,8 @@ pub fn put_point_cloud_chunk(
 }
 
 /// Resolve point bytes from a chunk (blob ref preferred, else legacy inline).
-pub fn resolve_point_bytes(
-    store: &ObjectStore,
+pub fn resolve_point_bytes<R: ObjectRead + ?Sized>(
+    store: &R,
     body: &PointCloudChunkBody,
 ) -> Result<Vec<u8>> {
     if let Some(cid) = &body.points_blob {
@@ -224,7 +225,10 @@ pub fn mesh_object(capture: &MeshCapture) -> Object {
 }
 
 /// Put mesh vertex/index payloads as Blobs; return a skinny Mesh object.
-pub fn put_mesh(store: &ObjectStore, capture: &MeshCapture) -> Result<Object> {
+///
+/// Production callers should pass a [`crate::repository::BuildingRepository`]
+/// so the write is covered by the repository lock. Staging is the repository's job.
+pub fn put_mesh<W: ObjectWrite + ?Sized>(store: &W, capture: &MeshCapture) -> Result<Object> {
     let mut v_props = BTreeMap::new();
     v_props.insert("role".into(), "mesh_vertices".into());
     let v_blob = Object::new_with_created(
@@ -268,7 +272,10 @@ pub fn put_mesh(store: &ObjectStore, capture: &MeshCapture) -> Result<Object> {
 }
 
 /// Resolve mesh vertex bytes (blob preferred, else legacy inline).
-pub fn resolve_mesh_vertices(store: &ObjectStore, body: &MeshBody) -> Result<Vec<u8>> {
+pub fn resolve_mesh_vertices<R: ObjectRead + ?Sized>(
+    store: &R,
+    body: &MeshBody,
+) -> Result<Vec<u8>> {
     if let Some(cid) = &body.vertices_blob {
         let obj = store.get(cid)?;
         match obj.body {
@@ -283,7 +290,10 @@ pub fn resolve_mesh_vertices(store: &ObjectStore, body: &MeshBody) -> Result<Vec
 }
 
 /// Resolve mesh index bytes (blob preferred, else legacy inline).
-pub fn resolve_mesh_indices(store: &ObjectStore, body: &MeshBody) -> Result<Vec<u8>> {
+pub fn resolve_mesh_indices<R: ObjectRead + ?Sized>(
+    store: &R,
+    body: &MeshBody,
+) -> Result<Vec<u8>> {
     if let Some(cid) = &body.indices_blob {
         let obj = store.get(cid)?;
         match obj.body {
@@ -549,7 +559,7 @@ mod tests {
     #[test]
     fn annotation_and_space_objects() {
         let space = space_object(&SpaceCapture {
-                    entity_id: None,
+            entity_id: None,
             name: Some("Electrical".into()),
             pose: Pose {
                 position: [1.0, 0.0, 2.0],

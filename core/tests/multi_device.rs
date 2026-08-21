@@ -204,14 +204,16 @@ fn concurrent_remove_only_drops_entity() {
         mirror_objects(dir_b.path(), dir.path());
         let mut repo_a = BuildingRepository::open(dir.path(), &bid).unwrap();
         assert_eq!(repo_a.head_root(), Some(root_a));
-        let merged = repo_a.merge_root(tip_b.root_cid, Some("merge".into())).unwrap();
+        let merged = repo_a
+            .merge_root(tip_b.root_cid, Some("merge".into()))
+            .unwrap();
         let heads = repo_a.list_entity_heads().unwrap();
         assert!(
             !heads.iter().any(|(e, _, _)| e == &eid),
             "entity must stay removed after merge with tip that kept it; heads={heads:?}"
         );
         // Annotation from B should be present
-        let report = score_root(repo_a.store(), &merged.root_cid, &Default::default()).unwrap();
+        let report = score_root(&repo_a, &merged.root_cid, &Default::default()).unwrap();
         assert!(report.total_objects >= 2);
     }
 }
@@ -292,7 +294,7 @@ fn scoring_ignores_removed_and_superseded_entity_versions() {
     })
     .unwrap();
     let c1 = repo.commit(Some("v1".into())).unwrap();
-    let score1 = score_root(repo.store(), &c1.root_cid, &Default::default()).unwrap();
+    let score1 = score_root(&repo, &c1.root_cid, &Default::default()).unwrap();
 
     repo.capture_space(&SpaceCapture {
         entity_id: Some(eid.clone()),
@@ -307,7 +309,7 @@ fn scoring_ignores_removed_and_superseded_entity_versions() {
     })
     .unwrap();
     let c2 = repo.commit(Some("v2".into())).unwrap();
-    let score2 = score_root(repo.store(), &c2.root_cid, &Default::default()).unwrap();
+    let score2 = score_root(&repo, &c2.root_cid, &Default::default()).unwrap();
     // Same space count (one entity head), not double.
     assert_eq!(
         score1.contributors.iter().map(|c| c.spaces).sum::<u64>(),
@@ -316,7 +318,7 @@ fn scoring_ignores_removed_and_superseded_entity_versions() {
 
     repo.remove_entity(&eid).unwrap();
     let c3 = repo.commit(Some("rm".into())).unwrap();
-    let score3 = score_root(repo.store(), &c3.root_cid, &Default::default()).unwrap();
+    let score3 = score_root(&repo, &c3.root_cid, &Default::default()).unwrap();
     assert_eq!(
         score3.contributors.iter().map(|c| c.spaces).sum::<u64>(),
         0,
@@ -363,10 +365,13 @@ fn scoring_after_merge_matches_active_set() {
     if rb.head_root() != Some(base.root_cid) {
         rb.adopt_root(base.root_cid).unwrap();
     }
-    rb.capture_annotation(&AnnotationCapture::new("right", Pose {
-        position: [5.0, 0.0, 0.0],
-        orientation: [0.0, 0.0, 0.0, 1.0],
-    }))
+    rb.capture_annotation(&AnnotationCapture::new(
+        "right",
+        Pose {
+            position: [5.0, 0.0, 0.0],
+            orientation: [0.0, 0.0, 0.0, 1.0],
+        },
+    ))
     .unwrap();
     let tip_b = rb.commit(Some("b".into())).unwrap();
     drop(rb);
@@ -375,7 +380,7 @@ fn scoring_after_merge_matches_active_set() {
     let mut ra = BuildingRepository::open(dir.path(), &bid).unwrap();
     assert_eq!(ra.head_root(), Some(tip_a.root_cid));
     let merged = ra.merge_root(tip_b.root_cid, Some("m".into())).unwrap();
-    let report = score_root(ra.store(), &merged.root_cid, &Default::default()).unwrap();
+    let report = score_root(&ra, &merged.root_cid, &Default::default()).unwrap();
     let anns: u64 = report.contributors.iter().map(|c| c.annotations).sum();
     assert_eq!(anns, 2, "both concurrent annotations scored once each");
     let spaces: u64 = report.contributors.iter().map(|c| c.spaces).sum();

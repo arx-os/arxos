@@ -16,7 +16,7 @@ pub use checkpoint::{
 };
 pub use closure::{
     get_root_closure_blobs, get_root_closure_blobs_with_options, missing_active_objects,
-    ClosureOptions, ClosureResult,
+    ClosureOptions, ClosureResult, ClosureView, RootClosure,
 };
 
 use std::collections::BTreeSet;
@@ -28,7 +28,7 @@ use crate::cid::Cid;
 use crate::crypto::{AuthorSignature, Keypair};
 use crate::error::{Error, Result};
 use crate::object::{BuildingId, Object, ObjectBody, ObjectHeader, SCHEMA_VERSION};
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 /// Root body: the committed state of a building repository.
 ///
@@ -116,7 +116,10 @@ impl RootBody {
     /// Fail closed: a pure delta chain that never reaches a checkpoint (full-set
     /// root with `objects: Some(_)`) is rejected. Repository genesis always
     /// checkpoints; this guards hand-built or corrupted history.
-    pub fn materialize_active_objects(&self, store: &ObjectStore) -> Result<BTreeSet<Cid>> {
+    pub fn materialize_active_objects<R: ObjectRead + ?Sized>(
+        &self,
+        store: &R,
+    ) -> Result<BTreeSet<Cid>> {
         if let Some(ref legacy_set) = self.objects {
             return Ok(legacy_set.clone());
         }

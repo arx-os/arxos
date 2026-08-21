@@ -32,7 +32,7 @@ use crate::crypto::PublicKey;
 use crate::error::{Error, Result};
 use crate::object::{Object, ObjectBody, ObjectType};
 use crate::root::RootBody;
-use crate::store::ObjectStore;
+use crate::store::ObjectRead;
 
 /// Policy version embedded in every report for offline replay.
 ///
@@ -176,8 +176,8 @@ pub fn attribute_object(cid: Cid, obj: &Object) -> Contribution {
 /// Score contributions under a root (includes root object set members present in store).
 ///
 /// Uses [`ScoringPolicy::default`] (`policy_version` = [`DEFAULT_POLICY_VERSION`]).
-pub fn score_root(
-    store: &ObjectStore,
+pub fn score_root<R: ObjectRead + ?Sized>(
+    store: &R,
     root_cid: &Cid,
     weights: &ScoreWeights,
 ) -> Result<ScoreReport> {
@@ -192,8 +192,8 @@ pub fn score_root(
 }
 
 /// Score a root with an explicit versioned policy.
-pub fn score_root_with_policy(
-    store: &ObjectStore,
+pub fn score_root_with_policy<R: ObjectRead + ?Sized>(
+    store: &R,
     root_cid: &Cid,
     policy: &ScoringPolicy,
 ) -> Result<ScoreReport> {
@@ -215,8 +215,8 @@ pub fn score_root_with_policy(
 }
 
 /// Score an arbitrary set of CIDs with default policy version and given weights.
-pub fn score_cids(
-    store: &ObjectStore,
+pub fn score_cids<R: ObjectRead + ?Sized>(
+    store: &R,
     cids: impl IntoIterator<Item = Cid>,
     root_cid: Option<String>,
     building_id: String,
@@ -235,8 +235,8 @@ pub fn score_cids(
 }
 
 /// Score an arbitrary set of CIDs with an explicit policy.
-pub fn score_cids_with_policy(
-    store: &ObjectStore,
+pub fn score_cids_with_policy<R: ObjectRead + ?Sized>(
+    store: &R,
     cids: impl IntoIterator<Item = Cid>,
     root_cid: Option<String>,
     building_id: String,
@@ -384,7 +384,7 @@ mod tests {
         ))
         .unwrap();
         let commit = repo.commit(Some("c".into())).unwrap();
-        let report = score_root(repo.store(), &commit.root_cid, &ScoreWeights::default()).unwrap();
+        let report = score_root(&repo, &commit.root_cid, &ScoreWeights::default()).unwrap();
         assert_eq!(report.policy_version, DEFAULT_POLICY_VERSION);
         assert!(report.total_score > 0.0);
         assert!(!report.contributors.is_empty());
@@ -468,8 +468,8 @@ mod tests {
         .unwrap();
         let commit = repo.commit(Some("c".into())).unwrap();
         let policy = ScoringPolicy::default();
-        let r1 = score_root_with_policy(repo.store(), &commit.root_cid, &policy).unwrap();
-        let r2 = score_root_with_policy(repo.store(), &commit.root_cid, &policy).unwrap();
+        let r1 = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
+        let r2 = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
         assert_eq!(r1, r2);
     }
 

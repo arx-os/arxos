@@ -18,8 +18,13 @@ active set.
 
 **Roots.** A Root is a signed commit for one building. Most commits are deltas
 (`added` / `removed` CIDs); a full-set checkpoint is written periodically so
-history walks stay bounded. Only keys listed in `Building.controller_keys` may
-sign Roots that advance the head (fail closed).
+history walks stay bounded. Authority to advance a head lives in
+`RootBody.authors` (not `Object.header.signature`). Local commit is
+self-consistency against the Building in the new Root. Adopt / production pull
+also require replica continuity: remote authors must be controllers of *this*
+replica's current Building, and the remote Root must descend from the local
+head. First contact (`open_or_follow` with no head) is TOFU.
+`allow_untrusted` is import/debug, not default sync.
 
 **Local store.** Objects live under a directory of content-addressed files. A
 small metadata file holds each building’s head pointer. A single-writer lock
@@ -27,8 +32,8 @@ guards concurrent repository writes on the same path. Who may read or write the
 CAS is defined in the [store contract](core/README.md#store-contract).
 
 **Sync.** Peers advertise and pull root closures (Iroh QUIC, optional mDNS on
-the LAN). Bytes are verified by CID; adopting a remote head reuses the same
-authorization rules as local commit.
+the LAN). Bytes are verified by CID (CAS admission). Adopting a remote head is
+a distinct step: self-consistency plus replica continuity.
 
 **Interop.** Optional gateways project a building head to OpenUSD (USDA) or a
 limited IFC4 STEP subset, preserving Arxos identity metadata.

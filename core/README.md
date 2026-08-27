@@ -7,6 +7,7 @@ Core library for Arxos: local-first content-addressed as-built repository.
 - **Content addressing**: Canonical CBOR + BLAKE3 CIDs
 - **Object schema**: Building, Floor, Space, Equipment, Annotation, … + signatures
 - **Roots**: Delta commits, checkpoints, materialization, sync closures, controller auth
+  (two sign laws; adopt = self-consistency + replica continuity; first contact is TOFU)
 - **Spatial index**: Versioned R-tree as ordinary CAS objects
 - **Repository**: Building head, working set, capture/commit
 - **Scoring**: Deterministic contributor points (diagnostic; fiat settlement is off-band)
@@ -20,6 +21,15 @@ These rules are non-negotiable. New code that violates them will be rejected.
 1. **CAS purity.** `ObjectStore` is a filesystem content-addressed store: `has` / `get` / `get_bytes` / `put` / `put_bytes`. No query, signing, collapse, scoring, or indexing algorithms live on it.
 2. **Single domain writer.** Building-scoped objects and roots go through `BuildingRepository` (capture → stage → commit, ingest → adopt, merge). Do not take an exclusive lock and `put` on a raw `ObjectStore` for building data.
 3. **Derived layers are readers.** Working set, scoring, verification, entity collapse, spatial *queries*, and export consume `ObjectRead` or a closed `RootClosure` / `ClosureView`. They must not take a writable store.
+
+### Roots: two sign laws, two checks
+
+- **Leaves** (`Object::sign`): optional provenance on `header.author` / `header.signature`. CID includes the signature.
+- **Roots** (`RootBody::sign`): required authority in `body.authors`. `into_object` blanks `header.signature`. `Object::verify_signature` on a Root is defined to fail.
+- **`verify_with_store`**: self-consistency of a Root versus the Building in *that Root's* active set. Local `commit` uses this and nothing else.
+- **Adopt / production pull** (`allow_untrusted = false`, `set_head = true`): self-consistency **plus** replica continuity (`verify_continuous_with_local`). Remote authors must be controllers of *this replica's* current Building, and the remote Root must descend from `head_root` (`previous_root` / `merge_parents`). A full-set checkpoint with `previous_root = None` against an existing head is a second genesis and is rejected.
+- **First contact** (`open_or_follow` with `head_root == None`): TOFU after self-consistency.
+- **`allow_untrusted`**: IFC/USD unsigned import and explicit FFI/debug flags. Not the production fetch default. Ingest may store untrusted bytes; heads do not advance on them by default.
 
 ### Preferred types for new code
 

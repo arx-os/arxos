@@ -128,7 +128,19 @@ impl BuildingRepository {
             .record
             .head_root
             .ok_or_else(|| Error::Validation("no local head to merge into".into()))?;
-        let result = crate::merge::merge_roots(&self.store, head, other_root, kp, message, true)?;
+        let replica = crate::merge::MergeReplica {
+            local_head: head,
+            local_active: self.active_objects.clone(),
+        };
+        let result = crate::merge::merge_roots_with_replica(
+            &self.store,
+            head,
+            other_root,
+            kp,
+            message,
+            true,
+            Some(&replica),
+        )?;
         self.adopt_root(result.root_cid)?;
         Ok(result)
     }

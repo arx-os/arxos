@@ -62,8 +62,8 @@ pub use scoring::{
 };
 pub use error::{Error, Result};
 pub use merge::{
-    find_common_ancestor, merge_roots, plan_merge, three_way_object_set, MergePlan, MergeResult,
-    ANNOTATION_DEDUP_M,
+    find_common_ancestor, merge_roots, merge_roots_with_replica, plan_merge, three_way_object_set,
+    MergePlan, MergeReplica, MergeResult, ANNOTATION_DEDUP_M,
 };
 pub use object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,

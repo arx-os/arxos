@@ -20,9 +20,21 @@ use crate::crypto::Keypair;
 use crate::entity::collapse_active_set;
 use crate::error::{Error, Result};
 use crate::object::{BuildingId, Object, ObjectBody, ObjectType, Pose};
-use crate::root::{RootBody, RootBuilder};
+use crate::root::{resolve_controller_keys, RootBody, RootBuilder};
 use crate::spatial;
 use crate::store::{ObjectRead, ObjectWrite};
+
+/// Replica view for merge: local head is trusted; a remote parent whose
+/// authors are not local controllers cannot supply the winning Building.
+///
+/// Concurrent honest devices that are still on `controller_keys` remain
+/// eligible (`controller_add_survives_sync_and_enforce`). Ancestry is not
+/// required here — that is adopt's job.
+#[derive(Debug, Clone)]
+pub struct MergeReplica {
+    pub local_head: Cid,
+    pub local_active: BTreeSet<Cid>,
+}
 
 /// Distance under which annotations with identical text are considered duplicates.
 pub const ANNOTATION_DEDUP_M: f64 = 0.35;
@@ -39,10 +51,7 @@ pub struct MergeResult {
 }
 
 /// Load a root body by object CID.
-pub fn load_root<R: ObjectRead + ?Sized>(
-    store: &R,
-    root_cid: &Cid,
-) -> Result<(Object, RootBody)> {
+pub fn load_root<R: ObjectRead + ?Sized>(store: &R, root_cid: &Cid) -> Result<(Object, RootBody)> {
     let obj = store.get(root_cid)?;
     let body = RootBody::from_object(&obj)?.clone();
     Ok((obj, body))
@@ -135,7 +144,9 @@ fn ancestor_chain<R: ObjectRead + ?Sized>(store: &R, tip: Cid) -> Result<Vec<Cid
     let mut cur = Some(tip);
     while let Some(cid) = cur {
         if !visited.insert(cid) {
-            return Err(Error::Validation("cyclic root chain during merge LCA".into()));
+            return Err(Error::Validation(
+                "cyclic root chain during merge LCA".into(),
+            ));
         }
         chain.push(cid);
         let (_, body) = load_root(store, &cid)?;
@@ -163,11 +174,7 @@ pub fn find_common_ancestor<R: ObjectRead + ?Sized>(
 }
 
 /// True if `ancestor` appears on the `previous_root` chain of `desc` (inclusive).
-fn is_ancestor_of<R: ObjectRead + ?Sized>(
-    store: &R,
-    ancestor: Cid,
-    desc: Cid,
-) -> Result<bool> {
+fn is_ancestor_of<R: ObjectRead + ?Sized>(store: &R, ancestor: Cid, desc: Cid) -> Result<bool> {
     Ok(ancestor_chain(store, desc)?.contains(&ancestor))
 }
 
@@ -199,10 +206,65 @@ pub fn three_way_object_set(
     result
 }
 
+/// Building CIDs present in `cids`. Missing objects are skipped.
+fn building_cids_in<R: ObjectRead + ?Sized>(
+    store: &R,
+    cids: &BTreeSet<Cid>,
+) -> Result<BTreeSet<Cid>> {
+    let mut out = BTreeSet::new();
+    for cid in cids {
+        let obj = match store.get(cid) {
+            Ok(o) => o,
+            Err(Error::NotFound(_)) => continue,
+            Err(e) => return Err(e),
+        };
+        if matches!(obj.body, ObjectBody::Building(_)) {
+            out.insert(*cid);
+        }
+    }
+    Ok(out)
+}
+
+fn authors_are_local_controllers(root: &RootBody, local_keys: &[crate::crypto::PublicKey]) -> bool {
+    !root.authors.is_empty()
+        && root
+            .authors
+            .iter()
+            .all(|a| local_keys.iter().any(|k| k == &a.public_key))
+}
+
+/// Buildings allowed to win collapse: local replica set, plus Buildings from
+/// a remote parent only when every remote author is a local controller.
+fn eligible_building_winners<R: ObjectRead + ?Sized>(
+    store: &R,
+    building_id: &BuildingId,
+    cid_a: Cid,
+    a: &RootBody,
+    active_a: &BTreeSet<Cid>,
+    cid_b: Cid,
+    b: &RootBody,
+    active_b: &BTreeSet<Cid>,
+    replica: &MergeReplica,
+) -> Result<BTreeSet<Cid>> {
+    let local_keys = resolve_controller_keys(store, &replica.local_active, building_id)?;
+    let mut eligible = building_cids_in(store, &replica.local_active)?;
+    for (cid, body, active) in [(cid_a, a, active_a), (cid_b, b, active_b)] {
+        if cid == replica.local_head || authors_are_local_controllers(body, &local_keys) {
+            eligible.extend(building_cids_in(store, active)?);
+        }
+    }
+    Ok(eligible)
+}
+
 /// Keep at most one Building object per [`BuildingId`] (newest `created`, then CID).
+///
+/// When `eligible_winners` is `Some`, only those CIDs may be selected. An
+/// ingested-only untrusted Building with a newer `created` cannot win
+/// (Mallory fork). Fail closed if Buildings exist but none are eligible.
 fn collapse_buildings<R: ObjectRead + ?Sized>(
     store: &R,
     objects: &BTreeSet<Cid>,
+    eligible_winners: Option<&BTreeSet<Cid>>,
 ) -> Result<(BTreeSet<Cid>, u64)> {
     let mut best: BTreeMap<BuildingId, (Cid, u64)> = BTreeMap::new();
     let mut building_cids: BTreeSet<Cid> = BTreeSet::new();
@@ -219,15 +281,18 @@ fn collapse_buildings<R: ObjectRead + ?Sized>(
         };
         if let ObjectBody::Building(b) = &obj.body {
             building_cids.insert(*cid);
+            if let Some(ok) = eligible_winners {
+                if !ok.contains(cid) {
+                    continue;
+                }
+            }
             let created = obj.header.created;
             match best.get(&b.building_id) {
                 None => {
                     best.insert(b.building_id.clone(), (*cid, created));
                 }
                 Some((prev_cid, prev_created)) => {
-                    if created > *prev_created
-                        || (created == *prev_created && *cid > *prev_cid)
-                    {
+                    if created > *prev_created || (created == *prev_created && *cid > *prev_cid) {
                         best.insert(b.building_id.clone(), (*cid, created));
                     }
                 }
@@ -235,6 +300,12 @@ fn collapse_buildings<R: ObjectRead + ?Sized>(
         } else {
             non_building.insert(*cid);
         }
+    }
+
+    if eligible_winners.is_some() && !building_cids.is_empty() && best.is_empty() {
+        return Err(Error::Authorization(
+            "untrusted Building cannot win merge collapse".into(),
+        ));
     }
 
     let mut kept = non_building;
@@ -253,6 +324,9 @@ fn collapse_buildings<R: ObjectRead + ?Sized>(
 /// Merge two root objects already present in `store`.
 ///
 /// The merged root is signed by `keypair` and written to the store.
+/// Parents must pass [`RootBody::verify_with_store`]. Without a
+/// [`MergeReplica`], Building collapse is newest-`created` among both
+/// parents (store-level helper / tests).
 pub fn merge_roots<W: ObjectWrite + ?Sized>(
     store: &W,
     root_a: Cid,
@@ -260,6 +334,27 @@ pub fn merge_roots<W: ObjectWrite + ?Sized>(
     keypair: &Keypair,
     message: Option<String>,
     rebuild_spatial: bool,
+) -> Result<MergeResult> {
+    merge_roots_with_replica(
+        store,
+        root_a,
+        root_b,
+        keypair,
+        message,
+        rebuild_spatial,
+        None,
+    )
+}
+
+/// Merge with replica trust: untrusted remote Buildings cannot win collapse.
+pub fn merge_roots_with_replica<W: ObjectWrite + ?Sized>(
+    store: &W,
+    root_a: Cid,
+    root_b: Cid,
+    keypair: &Keypair,
+    message: Option<String>,
+    rebuild_spatial: bool,
+    replica: Option<&MergeReplica>,
 ) -> Result<MergeResult> {
     if root_a == root_b {
         return Err(Error::Validation("cannot merge a root with itself".into()));
@@ -272,6 +367,11 @@ pub fn merge_roots<W: ObjectWrite + ?Sized>(
             a.building_id, b.building_id
         )));
     }
+
+    // Self-consistency of each parent. Replica continuity (which Building may
+    // win) is applied below when `replica` is set; ancestry is adopt's job.
+    a.verify_with_store(store)?;
+    b.verify_with_store(store)?;
 
     let active_a = a.materialize_active_objects(store)?;
     let active_b = b.materialize_active_objects(store)?;
@@ -307,12 +407,25 @@ pub fn merge_roots<W: ObjectWrite + ?Sized>(
     objects = collapsed.kept;
 
     // Building collapse (controller rotation → one Building per building_id).
-    let (after_bldg, bldg_superseded) = collapse_buildings(store, &objects)?;
+    let eligible = match replica {
+        Some(rep) => Some(eligible_building_winners(
+            store,
+            &a.building_id,
+            root_a,
+            &a,
+            &active_a,
+            root_b,
+            &b,
+            &active_b,
+            rep,
+        )?),
+        None => None,
+    };
+    let (after_bldg, bldg_superseded) = collapse_buildings(store, &objects, eligible.as_ref())?;
     objects = after_bldg;
 
     let drops = annotation_dedupe_drops(store, &objects)?;
-    let deduped =
-        drops.len() as u64 + collapsed.superseded.len() as u64 + bldg_superseded;
+    let deduped = drops.len() as u64 + collapsed.superseded.len() as u64 + bldg_superseded;
     for d in drops {
         objects.remove(&d);
     }
@@ -421,7 +534,7 @@ pub fn plan_merge<R: ObjectRead + ?Sized>(
     objects.remove(&root_a);
     objects.remove(&root_b);
     let collapsed = collapse_active_set(store, &objects)?;
-    let (after_bldg, bldg_super) = collapse_buildings(store, &collapsed.kept)?;
+    let (after_bldg, bldg_super) = collapse_buildings(store, &collapsed.kept, None)?;
     let drops = annotation_dedupe_drops(store, &after_bldg)?;
     Ok(MergePlan {
         union_size: after_bldg.len(),
@@ -437,6 +550,7 @@ mod tests {
     use crate::crypto::Keypair;
     use crate::entity::{entity_id_of, EntityId};
     use crate::object::{BuildingBody, BuildingId, ObjectBody, Pose};
+    use crate::repository::BuildingRepository;
     use crate::store::ObjectStore;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
@@ -691,5 +805,40 @@ mod tests {
         assert_eq!(entity_id_of(&store.get(&c_new).unwrap()).unwrap(), &eid);
         // building + one space version
         assert_eq!(active.len(), 2);
+    }
+
+    #[test]
+    fn merge_untrusted_newer_building_cannot_win() {
+        let dir = tempdir().unwrap();
+        let mut repo = BuildingRepository::init(dir.path(), Some("Alice".into()), None).unwrap();
+        let alice_pk = repo.keypair().unwrap().public_key();
+        let bid = repo.building_id().clone();
+        let mallory = Keypair::generate();
+
+        let b_m = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: Some("Mallory".into()),
+                controller_keys: vec![mallory.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            u64::MAX / 2,
+        );
+        let b_m_cid = repo.put_object(&b_m).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(b_m_cid);
+        let (fork, fork_cid) = RootBuilder::new(bid, 50)
+            .objects(objects)
+            .message("mallory")
+            .build_signed(&mallory)
+            .unwrap();
+        repo.put_object(&fork).unwrap();
+
+        repo.merge_root(fork_cid, Some("merge mallory".into()))
+            .unwrap();
+        let keys = repo.controller_keys().unwrap();
+        assert_eq!(keys.len(), 1, "{keys:?}");
+        assert!(keys.contains(&alice_pk));
+        assert!(!keys.contains(&mallory.public_key()));
     }
 }

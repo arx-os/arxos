@@ -9,7 +9,10 @@ mod auth;
 mod checkpoint;
 mod closure;
 
-pub use auth::resolve_controller_keys;
+pub use auth::{
+    resolve_controller_keys, verify_continuous_with_local, ContinuityOutcome,
+    MAX_CONTINUITY_ANCESTOR_HOPS,
+};
 pub use checkpoint::{
     distance_from_checkpoint, is_checkpoint_body, should_checkpoint_at, should_emit_checkpoint,
     CHECKPOINT_INTERVAL,
@@ -44,19 +47,19 @@ pub struct RootBody {
     /// attribution. Empty for non-merge commits.
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub merge_parents: BTreeSet<Cid>,
-    
+
     /// Incremental added object CIDs.
     #[serde(default)]
     pub added: BTreeSet<Cid>,
-    
+
     /// Incremental removed object CIDs.
     #[serde(default)]
     pub removed: BTreeSet<Cid>,
-    
+
     /// Content-addressed object set for legacy full-set roots.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub objects: Option<BTreeSet<Cid>>,
-    
+
     pub spatial_index_root: Option<Cid>,
     /// Unix timestamp in seconds.
     pub timestamp: u64,
@@ -214,12 +217,19 @@ impl RootBody {
     /// Append an author signature.
     pub fn sign(&mut self, keypair: &Keypair) -> Result<()> {
         let payload = self.signing_payload()?;
-        self.authors.push(AuthorSignature::create(keypair, &payload));
+        self.authors
+            .push(AuthorSignature::create(keypair, &payload));
         Ok(())
     }
 
-
     /// Wrap as a full Object (for CAS storage).
+    ///
+    /// Roots use a **different sign law** than leaves: authority lives in
+    /// [`Self::authors`], not `ObjectHeader::signature`. This adapter copies
+    /// the first author onto the header and **blanks** `header.signature` so
+    /// the Root can live in the CAS. [`Object::verify_signature`] on the
+    /// result is defined to fail; use [`Self::verify_authors`] /
+    /// [`Self::verify_with_store`].
     pub fn into_object(self, created: u64) -> Object {
         Object {
             header: ObjectHeader {
@@ -345,7 +355,6 @@ impl RootBuilder {
 pub fn root_body_cid(root: &RootBody) -> Result<Cid> {
     cid_of(root)
 }
-
 
 #[cfg(test)]
 mod tests {

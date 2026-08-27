@@ -201,10 +201,13 @@ fn import_file(
         .unwrap_or(0);
 
     let root_cid = if let Some(kp) = sign.or_else(|| repo.keypair()) {
-        let (root_obj, root_cid) = RootBuilder::new(building_id.clone(), ts)
+        let mut builder = RootBuilder::new(building_id.clone(), ts)
             .objects(set)
-            .message("ifc import")
-            .build_signed(kp)?;
+            .message("ifc import");
+        if let Some(prev) = repo.head_root() {
+            builder = builder.previous_root(prev);
+        }
+        let (root_obj, root_cid) = builder.build_signed(kp)?;
         repo.put_object(&root_obj)?;
         repo.adopt_root(root_cid)?;
         Some(root_cid)

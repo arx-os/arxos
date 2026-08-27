@@ -72,13 +72,26 @@ pub struct CommitResult {
     pub building_id: BuildingId,
     pub object_count: u64,
     pub previous_root: Option<Cid>,
+    /// Adopt-only: [`crate::root::ContinuityOutcome`] from
+    /// [`crate::root::verify_continuous_with_local`].
+    ///
+    /// - [`crate::root::ContinuityOutcome::FirstTrust`] — replica had no head (TOFU)
+    /// - [`crate::root::ContinuityOutcome::FastForward`] — authors ∩ local keys and ancestry
+    /// - `None` — local [`BuildingRepository::commit`], or `allow_untrusted` (continuity not claimed)
+    pub continuity: Option<crate::root::ContinuityOutcome>,
 }
 
 /// Options for adopting a remote root.
+///
+/// Default is production pull: fail-closed self-consistency **and** replica
+/// continuity. [`Self::allow_untrusted`] is import/debug (IFC/USD unsigned
+/// roots, explicit FFI flags), not the network default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AdoptOptions {
-    /// Allow untrusted root signatures / unauthorized authors.
-    /// If false, verification failures cause adoption to fail.
+    /// Skip Root-law and replica-continuity checks.
+    ///
+    /// If false (default), adopt requires [`crate::root::verify_continuous_with_local`].
+    /// If true, unsigned / unauthorized / forked roots may still become head.
     pub allow_untrusted: bool,
     /// Allow adopting a root even when some active objects (or the spatial index)
     /// are missing from the local store. Default is false (fail closed).
@@ -651,6 +664,10 @@ impl BuildingRepository {
 
     /// Create or open a building record that will follow a remote building id
     /// (no local key required until the device wants to author new roots).
+    ///
+    /// A newly created record has `head_root: None`. The first default
+    /// [`Self::adopt_root`] is TOFU ([`crate::root::ContinuityOutcome::FirstTrust`]).
+    /// Subsequent adopts require replica continuity against that head.
     pub fn open_or_follow(
         store_path: impl AsRef<Path>,
         building_id: &BuildingId,
@@ -997,11 +1014,13 @@ mod tests {
         let controller = repo.keypair().unwrap();
         let outsider = Keypair::generate();
 
-        // 1. Authorized controller signs a root — adopt succeeds.
+        // 1. Authorized controller signs a fast-forward root — adopt succeeds.
+        let local_head = repo.head_root().unwrap();
         let mut objects = BTreeSet::new();
         objects.insert(repo.record().building_object.unwrap());
         let (root_obj, signed_root_cid) = RootBuilder::new(bid.clone(), 100)
             .objects(objects.clone())
+            .previous_root(local_head)
             .message("signed commit")
             .build_signed(controller)
             .unwrap();
@@ -1055,8 +1074,10 @@ mod tests {
         let mut objects = BTreeSet::new();
         objects.insert(building_cid);
         objects.insert(ghost);
+        let local_head = repo.head_root().unwrap();
         let (root_obj, root_cid) = RootBuilder::new(bid, 200)
             .objects(objects)
+            .previous_root(local_head)
             .message("incomplete")
             .build_signed(controller)
             .unwrap();

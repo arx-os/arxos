@@ -1,20 +1,26 @@
-//! Adopt remote roots (authorization + completeness).
+//! Adopt remote roots (authorization + completeness + replica continuity).
 
 use crate::cid::Cid;
 use crate::error::{Error, Result};
-use crate::root::RootBody;
+use crate::root::{verify_continuous_with_local, RootBody};
 
 use super::{now_secs, AdoptOptions, BuildingRepository, CommitResult};
 
 impl BuildingRepository {
     /// Adopt a remote root as this building's head (after objects are in the CAS).
     ///
-    /// Fail closed by default if the root authors' signatures are missing or invalid.
+    /// Default (`allow_untrusted = false`): remote must be self-consistent
+    /// ([`RootBody::verify_with_store`]) **and** continuous with this replica
+    /// ([`verify_continuous_with_local`]). First contact (`head_root == None`)
+    /// is TOFU.
     pub fn adopt_root(&mut self, root_cid: Cid) -> Result<CommitResult> {
         self.adopt_root_with_options(root_cid, &AdoptOptions::default())
     }
 
     /// Adopt a remote root with explicit control over signature validation.
+    ///
+    /// Continuity is checked against [`BuildingRecord::head_root`] *before*
+    /// mutation. [`CommitResult::previous_root`] is observational.
     pub fn adopt_root_with_options(
         &mut self,
         root_cid: Cid,
@@ -52,21 +58,21 @@ impl BuildingRepository {
             }
         }
 
-        if !opts.allow_untrusted {
-            // Fail closed: valid signatures AND authors ∈ Building.controller_keys.
-            root.verify_with_store(&self.store).map_err(|e| match e {
-                Error::Authorization(msg) => {
-                    Error::Authorization(format!("root author authorization failed: {msg}"))
-                }
-                Error::Signature(msg) => {
-                    Error::Signature(format!("root author verification failed: {msg}"))
-                }
-                other => other,
-            })?;
+        let continuity = if !opts.allow_untrusted {
+            // Self-consistency + replica continuity. `allow_untrusted` skips both.
+            Some(verify_continuous_with_local(
+                &root,
+                &root_cid,
+                &self.store,
+                self.record.head_root.as_ref(),
+                &self.active_objects,
+            )?)
         } else {
             // Escape hatch: still attempt crypto verify for diagnostics, ignore failure.
+            // Continuity is not claimed.
             let _ = root.verify_authors();
-        }
+            None
+        };
 
         let object_count = active_set.len() as u64;
 
@@ -88,6 +94,7 @@ impl BuildingRepository {
             building_id: self.record.building_id.clone(),
             object_count,
             previous_root: previous,
+            continuity,
         })
     }
 }
@@ -199,6 +206,10 @@ mod tests {
         let res = repo.adopt_root(ff_cid).unwrap();
         assert_eq!(res.root_cid, ff_cid);
         assert_eq!(res.previous_root, Some(local_head));
+        assert_eq!(
+            res.continuity,
+            Some(crate::root::ContinuityOutcome::FastForward)
+        );
         assert_eq!(repo.head_root(), Some(ff_cid));
     }
 
@@ -220,6 +231,10 @@ mod tests {
         }
         let res = repo_b.adopt_root(head).unwrap();
         assert_eq!(res.root_cid, head);
+        assert_eq!(
+            res.continuity,
+            Some(crate::root::ContinuityOutcome::FirstTrust)
+        );
         assert_eq!(repo_b.head_root(), Some(head));
     }
 

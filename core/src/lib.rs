@@ -76,8 +76,8 @@ pub use repository::{
 pub use root::{
     distance_from_checkpoint, get_root_closure_blobs, get_root_closure_blobs_with_options,
     missing_active_objects, resolve_controller_keys, should_checkpoint_at, should_emit_checkpoint,
-    ClosureOptions, ClosureResult, ClosureView, RootBody, RootBuilder, RootClosure,
-    CHECKPOINT_INTERVAL,
+    verify_continuous_with_local, ClosureOptions, ClosureResult, ClosureView, ContinuityOutcome,
+    RootBody, RootBuilder, RootClosure, CHECKPOINT_INTERVAL, MAX_CONTINUITY_ANCESTOR_HOPS,
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::{

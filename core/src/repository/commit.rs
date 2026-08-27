@@ -141,6 +141,7 @@ impl BuildingRepository {
             building_id: self.record.building_id.clone(),
             object_count: self.active_objects.len() as u64,
             previous_root: previous,
+            continuity: None,
         })
     }
 }

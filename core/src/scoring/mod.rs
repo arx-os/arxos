@@ -156,8 +156,18 @@ fn weight_for(ty: ObjectType, w: &ScoreWeights) -> f64 {
 }
 
 /// Attribute a single object.
+///
+/// Roots use [`RootBody::authors`] / [`RootBody::verify_authors`] (header
+/// signature is blank by law). Leaves use `Object::sign`.
 pub fn attribute_object(cid: Cid, obj: &Object) -> Contribution {
-    let signature_valid = obj.header.signature.is_some() && obj.verify_signature().is_ok();
+    let (author, signature_valid) = if let ObjectBody::Root(root) = &obj.body {
+        let author = root.authors.first().map(|a| a.public_key);
+        let signature_valid = root.verify_authors().is_ok();
+        (author, signature_valid)
+    } else {
+        let signature_valid = obj.header.signature.is_some() && obj.verify_signature().is_ok();
+        (obj.header.author, signature_valid)
+    };
     let device_id = if let ObjectBody::Provenance(p) = &obj.body {
         p.properties.get("device_id").cloned()
     } else {
@@ -166,7 +176,7 @@ pub fn attribute_object(cid: Cid, obj: &Object) -> Contribution {
     Contribution {
         cid,
         object_type: obj.header.object_type,
-        author: obj.header.author,
+        author,
         created: obj.header.created,
         signature_valid,
         device_id,
@@ -294,21 +304,23 @@ pub fn score_contributions_with_policy(
             .author
             .map(|a| a.to_string())
             .unwrap_or_else(|| "anonymous".into());
-        let entry = by_author.entry(key.clone()).or_insert_with(|| ContributorScore {
-            author: if key == "anonymous" {
-                None
-            } else {
-                Some(key.clone())
-            },
-            objects: 0,
-            roots: 0,
-            annotations: 0,
-            point_cloud_chunks: 0,
-            spaces: 0,
-            signed_valid: 0,
-            signed_invalid: 0,
-            score: 0.0,
-        });
+        let entry = by_author
+            .entry(key.clone())
+            .or_insert_with(|| ContributorScore {
+                author: if key == "anonymous" {
+                    None
+                } else {
+                    Some(key.clone())
+                },
+                objects: 0,
+                roots: 0,
+                annotations: 0,
+                point_cloud_chunks: 0,
+                spaces: 0,
+                signed_valid: 0,
+                signed_invalid: 0,
+                score: 0.0,
+            });
         entry.objects += 1;
         match c.object_type {
             ObjectType::Root => entry.roots += 1,
@@ -433,22 +445,12 @@ mod tests {
         };
 
         let policy = ScoringPolicy::default();
-        let a = score_contributions_with_policy(
-            make(),
-            Some("root".into()),
-            "b1".into(),
-            &policy,
-        );
-        let b = score_contributions_with_policy(
-            make(),
-            Some("root".into()),
-            "b1".into(),
-            &policy,
-        );
+        let a = score_contributions_with_policy(make(), Some("root".into()), "b1".into(), &policy);
+        let b = score_contributions_with_policy(make(), Some("root".into()), "b1".into(), &policy);
         assert_eq!(a, b);
         assert_eq!(a.policy_version, DEFAULT_POLICY_VERSION);
         assert_eq!(a.contributors.len(), 2); // author + anonymous
-        // Higher score first
+                                             // Higher score first
         assert!(a.contributors[0].score >= a.contributors[1].score);
     }
 
@@ -456,8 +458,12 @@ mod tests {
     fn score_root_twice_matches() {
         let dir = tempdir().unwrap();
         let kp = Keypair::generate();
-        let mut repo =
-            BuildingRepository::init(dir.path(), Some("Det".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
+        let mut repo = BuildingRepository::init(
+            dir.path(),
+            Some("Det".into()),
+            Some(Keypair::from_seed(*kp.seed())),
+        )
+        .unwrap();
         repo.capture_annotation(&AnnotationCapture::new(
             "a",
             Pose {
@@ -471,6 +477,30 @@ mod tests {
         let r1 = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
         let r2 = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
         assert_eq!(r1, r2);
+    }
+
+    #[test]
+    fn score_root_counts_root_body_authors_as_signed() {
+        let dir = tempdir().unwrap();
+        let kp = Keypair::generate();
+        let repo = BuildingRepository::init(
+            dir.path(),
+            Some("RootSig".into()),
+            Some(Keypair::from_seed(*kp.seed())),
+        )
+        .unwrap();
+        let head = repo.head_root().unwrap();
+        let report = score_root(&repo, &head, &ScoreWeights::default()).unwrap();
+        let root_c = report
+            .contributions
+            .iter()
+            .find(|c| c.object_type == ObjectType::Root)
+            .expect("root contribution");
+        assert!(
+            root_c.signature_valid,
+            "RootBody.authors must score as signed"
+        );
+        assert_eq!(root_c.author, Some(kp.public_key()));
     }
 
     #[test]

@@ -23,10 +23,11 @@ func uniffiListBuildings(storePath: String) throws -> [FfiBuildingSummary] {
 
 func uniffiCaptureSpace(
     storePath: String, buildingId: String, name: String?,
-    x: Double, y: Double, z: Double
+    x: Double, y: Double, z: Double, entityId: String? = nil
 ) throws -> FfiCapturePutResult {
     try captureSpace(
-        storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z
+        storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z,
+        entityId: entityId
     )
 }
 

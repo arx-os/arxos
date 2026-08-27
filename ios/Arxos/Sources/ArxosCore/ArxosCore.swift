@@ -228,10 +228,12 @@ public enum ArxosCore {
         storePath: String,
         buildingId: String,
         name: String?,
-        x: Double, y: Double, z: Double
+        x: Double, y: Double, z: Double,
+        entityId: String? = nil
     ) throws -> CapturePutResult {
         let r = try uniffiCaptureSpace(
-            storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z
+            storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z,
+            entityId: entityId
         )
         return CapturePutResult(cid: r.cid, objectType: r.objectType)
     }

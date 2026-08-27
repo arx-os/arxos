@@ -333,6 +333,11 @@ fn pose(x: f64, y: f64, z: f64) -> Pose {
 }
 
 /// Capture a space at a world pose.
+/// Capture a space at a world pose.
+///
+/// `entity_id`: pass an existing id to create a replacement version of the
+/// same room (commit/merge will collapse). `None` mints a new [`arxos_core::EntityId`]
+/// and will **not** collapse with prior rooms.
 pub fn capture_space(
     store_path: String,
     building_id: String,
@@ -340,13 +345,24 @@ pub fn capture_space(
     x: f64,
     y: f64,
     z: f64,
+    entity_id: Option<String>,
 ) -> Result<FfiCapturePutResult, ArxosError> {
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
+    let entity_id = match entity_id {
+        Some(s) if !s.is_empty() => {
+            Some(
+                arxos_core::EntityId::from_str(&s).map_err(|e| ArxosError::InvalidInput {
+                    message: e.to_string(),
+                })?,
+            )
+        }
+        _ => None,
+    };
     let mut repo = BuildingRepository::open(&store_path, &bid)?;
     let res = repo.capture_space(&SpaceCapture {
-        entity_id: None,
+        entity_id,
         name,
         pose: pose(x, y, z),
         bounds: None,

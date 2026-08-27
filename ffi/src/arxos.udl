@@ -37,7 +37,7 @@ namespace arxos_core {
     sequence<FfiBuildingSummary> list_buildings(string store_path);
 
     [Throws=ArxosError]
-    FfiCapturePutResult capture_space(string store_path, string building_id, string? name, f64 x, f64 y, f64 z);
+    FfiCapturePutResult capture_space(string store_path, string building_id, string? name, f64 x, f64 y, f64 z, string? entity_id);
 
     [Throws=ArxosError]
     FfiCapturePutResult capture_annotation(string store_path, string building_id, string text, f64 x, f64 y, f64 z);

@@ -385,6 +385,118 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pull_set_head_default_does_not_install_mallory_fork() {
+        use arxos_core::crypto::Keypair;
+        use arxos_core::object::{BuildingBody, Object, ObjectBody};
+        use arxos_core::root::RootBuilder;
+        use std::collections::{BTreeMap, BTreeSet};
+
+        let mesh = MemoryMesh::new();
+        let dir_a = tempdir().unwrap();
+        let dir_b = tempdir().unwrap();
+        let dir_m = tempdir().unwrap();
+
+        let mut repo_a =
+            BuildingRepository::init(dir_a.path(), Some("Site A".into()), None).unwrap();
+        let bid = repo_a.building_id().clone();
+        repo_a
+            .capture_annotation(&AnnotationCapture::new("alice", Pose::default()))
+            .unwrap();
+        let commit = repo_a.commit(Some("alice".into())).unwrap();
+        let alice_root = commit.root_cid.to_string();
+        drop(repo_a);
+
+        let node_a = mesh
+            .attach(
+                dir_a.path(),
+                vec![BuildingHeadAd {
+                    building_id: bid.to_string(),
+                    root_cid: alice_root.clone(),
+                    name: Some("Site A".into()),
+                    object_count: commit.object_count,
+                }],
+            )
+            .unwrap();
+
+        {
+            let _repo_b =
+                BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Site A".into()))
+                    .unwrap();
+        }
+        let node_b = mesh.attach(dir_b.path(), vec![]).unwrap();
+        let pull_alice = pull_root(
+            &node_b,
+            node_a.peer_id(),
+            dir_b.path(),
+            &alice_root,
+            Some(bid.as_str()),
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(pull_alice.adopted.unwrap().root_cid, commit.root_cid);
+
+        // Mallory: same building_id, replaced Building, full-set genesis.
+        let mallory = Keypair::generate();
+        let mut repo_m =
+            BuildingRepository::open_or_follow(dir_m.path(), &bid, Some("Mallory".into())).unwrap();
+        let b_m = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: Some("Mallory".into()),
+                controller_keys: vec![mallory.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            99,
+        );
+        let b_m_cid = repo_m.put_object(&b_m).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(b_m_cid);
+        let (fork_obj, fork_cid) = RootBuilder::new(bid.clone(), 10_000)
+            .objects(objects)
+            .message("mallory genesis")
+            .build_signed(&mallory)
+            .unwrap();
+        repo_m.put_object(&fork_obj).unwrap();
+        repo_m.adopt_root(fork_cid).unwrap();
+        drop(repo_m);
+
+        let node_m = mesh
+            .attach(
+                dir_m.path(),
+                vec![BuildingHeadAd {
+                    building_id: bid.to_string(),
+                    root_cid: fork_cid.to_string(),
+                    name: Some("Mallory".into()),
+                    object_count: 1,
+                }],
+            )
+            .unwrap();
+
+        let err = pull_root(
+            &node_b,
+            node_m.peer_id(),
+            dir_b.path(),
+            &fork_cid.to_string(),
+            Some(bid.as_str()),
+            true,
+        )
+        .await
+        .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("authorization")
+                || msg.contains("local controller")
+                || msg.contains("second genesis")
+                || msg.contains("not a descendant"),
+            "unexpected error: {msg}"
+        );
+
+        let repo_b2 = BuildingRepository::open(dir_b.path(), &bid).unwrap();
+        assert_eq!(repo_b2.head_root(), Some(commit.root_cid));
+    }
+
+    #[tokio::test]
     async fn two_device_pull_root_with_spatial_index() {
         let mesh = MemoryMesh::new();
         let dir_a = tempdir().unwrap();

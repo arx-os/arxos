@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use arxos_core::capture::{AnnotationCapture, SpaceCapture};
 use arxos_core::entity::EntityId;
 use arxos_core::object::Pose;
-use arxos_core::repository::BuildingRepository;
+use arxos_core::repository::{AdoptOptions, BuildingRepository};
 use arxos_core::scoring::score_root;
 use arxos_core::Keypair;
 use tempfile::tempdir;
@@ -191,7 +191,18 @@ fn concurrent_remove_only_drops_entity() {
         let mut repo_b = BuildingRepository::open(dir_b.path(), &bid).unwrap();
         // If head is tip_a, adopt base (allow if tip_a is head).
         if repo_b.head_root() != Some(base.root_cid) {
-            repo_b.adopt_root(base.root_cid).unwrap();
+            // Fixture: rewind B to `base` to simulate a device that never saw
+            // tip_a. Default adopt refuses this (not a descendant). Named hatch
+            // only — not production pull.
+            repo_b
+                .adopt_root_with_options(
+                    base.root_cid,
+                    &AdoptOptions {
+                        allow_untrusted: true,
+                        allow_partial: false,
+                    },
+                )
+                .unwrap();
         }
         // B adds annotation only (keeps entity)
         repo_b

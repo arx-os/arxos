@@ -3,7 +3,7 @@
 A local-first store for as-built building data.
 
 Walk a room with a LiDAR iPhone. Arxos writes what you captured to a folder on
-the device. Copy that folder to a Mac to inspect it, export IFC or USD, or pull
+the device. Copy that folder to a machine to inspect it, export IFC or USD, or pull
 it onto another machine. There is no cloud in the loop.
 
 ## How it is stored

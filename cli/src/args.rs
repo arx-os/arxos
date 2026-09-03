@@ -1,13 +1,22 @@
 //! Clap argument definitions for the `arx` CLI.
 
-use std::path::PathBuf;
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "arx", version, about = "Arxos content-addressed building repository tools")]
+#[command(
+    name = "arx",
+    version,
+    about = "Arxos content-addressed building repository tools"
+)]
 pub struct Cli {
     /// Path to the local object store directory.
-    #[arg(long, global = true, default_value = ".arxos/store", env = "ARXOS_STORE")]
+    #[arg(
+        long,
+        global = true,
+        default_value = ".arxos/store",
+        env = "ARXOS_STORE"
+    )]
     pub store: PathBuf,
 
     #[command(subcommand)]
@@ -210,10 +219,7 @@ pub enum SpatialCommands {
 #[derive(Subcommand, Debug)]
 pub enum MergeCommands {
     /// Dry-run merge plan for two root CIDs
-    Plan {
-        root_a: String,
-        root_b: String,
-    },
+    Plan { root_a: String, root_b: String },
     /// Merge other_root into the building's current head
     Apply {
         building_id: String,
@@ -244,8 +250,13 @@ pub enum NetCommands {
         /// Building id (optional; inferred from root when omitted)
         #[arg(long)]
         building_id: Option<String>,
-        /// Adopt pulled root as local head
-        #[arg(long, default_value_t = true)]
+        /// Adopt pulled root as local head [default: true].
+        #[arg(
+            long = "no-set-head",
+            action = clap::ArgAction::SetFalse,
+            default_value_t = true,
+            help = "Ingest without adopting as local head (then merge apply with printed root_cid)"
+        )]
         set_head: bool,
         /// Allow adopting untrusted roots (verification failure becomes warning)
         #[arg(long, default_value_t = false)]
@@ -550,3 +561,33 @@ pub enum KeyCommands {
     Generate,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_fetch(extra: &[&str]) -> bool {
+        let mut args = vec!["arx", "net", "fetch", "--peer", "{}", "--root", "b3:00"];
+        args.extend(extra);
+        match Cli::try_parse_from(args) {
+            Ok(Cli {
+                command:
+                    Commands::Net {
+                        command: NetCommands::Fetch { set_head, .. },
+                    },
+                ..
+            }) => set_head,
+            Ok(other) => panic!("expected net fetch, got {other:?}"),
+            Err(e) => panic!("{e}"),
+        }
+    }
+
+    #[test]
+    fn fetch_set_head_default_true() {
+        assert!(parse_fetch(&[]));
+    }
+
+    #[test]
+    fn fetch_no_set_head_sets_false() {
+        assert!(!parse_fetch(&["--no-set-head"]));
+    }
+}

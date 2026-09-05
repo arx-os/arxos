@@ -1,19 +1,29 @@
 # Arxos
 
-A local-first store for as-built building data.
+A local-first record of the built world.
 
-Walk a room with a LiDAR iPhone. Arxos writes what you captured to a folder on
-the device. Copy that folder to a machine to inspect it, export IFC or USD, or pull
-it onto another machine. There is no cloud in the loop.
+Buildings as they actually are — rooms, equipment, notes, scans — live as signed objects on the devices that captured them. Walk a site with a LiDAR iPhone. Arxos writes what you captured to a folder on the device. Copy that folder to a machine to inspect it, export IFC or USD, or pull it onto another replica. There is no cloud in the loop.
 
-## How it is stored
+## How it works
 
-Each object is an immutable file named by a hash of its contents. A building’s
-history is a chain of signed Roots. Each replica has one official head
-(`BuildingRecord.head_root`). Controllers — keys on the Building object — may
-commit, adopt, and merge. Extra work is a Root CID. There is no proposal type.
+Field contributors write the as-built record at the wall.
 
-One process writes a given store at a time.
+1. **Capture.** A phone, laptop, or edge node records spaces, point clouds, meshes, and annotations.
+2. **Commit.** Each object is an immutable file named by a hash of its contents. A building’s history is a chain of signed Roots. Controllers — keys on the Building object — commit, adopt, and merge.
+3. **Replicate.** Another machine pulls a Root over the LAN (Iroh + mDNS) or receives the store folder. Official history is whoever those controller keys accept.
+4. **Use.** Inspect the head, list entities, score contributors, export IFC or USD for the tools that already run a building.
+
+One process writes a given store at a time. Extra work is just another Root CID. There is no proposal type.
+
+## DePIN and rewards
+
+Arxos is the data plane for a physical network: people and devices in the field writing as-built truth, not a token mint.
+
+- **Field contributors** capture and sign what they see. Attribution follows the key on the object or Root.
+- **Scoring** (`arx score`) is deterministic. Given the same store, Root, and policy, everyone gets the same points report. Points measure contribution; they are not money.
+- **Settlement is fiat, off-band.** Ops can pay contributors from those scores. This repo never embeds currency in CIDs and does not mint a token.
+
+Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do not treat it as a payroll number until multi-signal quality scoring is intentional product work.
 
 ## What works today
 

@@ -99,7 +99,7 @@ impl AnnotationCapture {
 /// Always stamps an [`EntityId`] (generated when the capture omits one) so
 /// subsequent pose/property updates can supersede this version on commit/merge.
 pub fn space_object(capture: &SpaceCapture) -> Object {
-    let entity_id = capture.entity_id.clone().unwrap_or_else(EntityId::new);
+    let entity_id = capture.entity_id.clone().unwrap_or_default();
     Object::new_with_created(
         ObjectBody::Space(SpaceBody {
             entity_id: Some(entity_id),

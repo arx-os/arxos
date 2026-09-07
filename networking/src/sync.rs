@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use arxos_core::object::BuildingId;
 use arxos_core::repository::{AdoptOptions, BuildingRepository, CommitResult, ObjectIngest};
-use arxos_core::Cid;
+use arxos_core::{Cid, PublicKey};
 
 use crate::error::{NetError, Result};
 use crate::protocol::BuildingHeadAd;
@@ -68,6 +68,7 @@ pub async fn pull_root<T: ObjectTransport + ?Sized>(
         set_head,
         false,
         false,
+        Vec::new(),
     )
     .await
 }
@@ -76,10 +77,9 @@ pub async fn pull_root<T: ObjectTransport + ?Sized>(
 /// whether large blob payloads are included.
 ///
 /// When `metadata_only` is true, the peer is asked for a closure that omits
-/// `Blob` objects (skinny domain objects only). Adopting a metadata-only pull
-/// as head requires `allow_partial` semantics for missing blob-backed payloads
-/// that remain referenced — we allow partial adopt only when `metadata_only`
-/// is set so incomplete blob presence does not fail the adopt.
+/// `Blob` objects (skinny domain objects only). A metadata-only pull **cannot**
+/// become head (`set_head` must be false); ingest stores what arrived and
+/// leaves `head_root` unchanged.
 pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     transport: &T,
     peer: &PeerId,
@@ -89,6 +89,7 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
     set_head: bool,
     allow_untrusted: bool,
     metadata_only: bool,
+    expected_controllers: Vec<PublicKey>,
 ) -> Result<PullResult> {
     let blobs = if metadata_only {
         transport
@@ -134,6 +135,7 @@ pub async fn pull_root_with_options<T: ObjectTransport + ?Sized>(
         set_head,
         allow_untrusted,
         metadata_only,
+        expected_controllers,
     )?;
 
     Ok(PullResult {
@@ -156,20 +158,25 @@ fn ingest_pulled_blobs(
     set_head: bool,
     allow_untrusted: bool,
     metadata_only: bool,
+    expected_controllers: Vec<PublicKey>,
 ) -> Result<(u64, u64, Option<CommitResult>)> {
     let bid = building_id.ok_or_else(|| {
         NetError::Protocol(
             "could not determine building_id for ingest (pass building_id or include a Root in the closure)".into(),
         )
     })?;
+    if set_head && metadata_only {
+        return Err(NetError::Protocol(
+            "refusing to adopt a metadata-only pull as head; pass --no-set-head".into(),
+        ));
+    }
     let mut repo = BuildingRepository::open_or_follow(store_path, &bid, None)?;
     let (stored, skipped) = put_blobs_into_repo(&repo, blobs)?;
     let adopted = if set_head {
         let opts = AdoptOptions {
             allow_untrusted,
-            // Metadata-first pulls intentionally omit blobs; allow partial adopt
-            // only in that mode. Full pulls stay fail-closed.
-            allow_partial: metadata_only,
+            allow_partial: false,
+            expected_controllers,
         };
         Some(repo.adopt_root_with_options(root, &opts)?)
     } else {
@@ -247,12 +254,49 @@ pub async fn pull_building_head_with_options<T: ObjectTransport + ?Sized>(
         set_head,
         allow_untrusted,
         false,
+        Vec::new(),
     )
     .await
 }
 
+/// True if `cid` is an advertised head or a member of an advertised head's closure.
+pub fn cid_in_advertised_closures(
+    store_path: &std::path::Path,
+    cid: &str,
+    ads: &[BuildingHeadAd],
+) -> Result<bool> {
+    if ads.iter().any(|a| a.root_cid == cid) {
+        return Ok(true);
+    }
+    let store = arxos_core::store::ObjectStore::open(store_path)?;
+    let want = Cid::from_str(cid).map_err(|e| NetError::Protocol(e.to_string()))?;
+    for ad in ads {
+        let root = Cid::from_str(&ad.root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
+        let result = arxos_core::root::get_root_closure_blobs_with_options(
+            &store,
+            &root,
+            &arxos_core::root::ClosureOptions {
+                allow_partial: true,
+                include_blobs: true,
+            },
+        )
+        .map_err(|e| NetError::Core(e.to_string()))?;
+        if result.blobs.iter().any(|(c, _)| *c == want) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// Serve helper: load object bytes for protocol handlers.
+///
+/// Only CIDs in the closure of a currently advertised building head are
+/// returned. Other CAS slots look missing (do not leak existence).
 pub fn serve_get_object(store_path: &std::path::Path, cid: &str) -> Result<Option<Vec<u8>>> {
+    let ads = building_ads_from_store(store_path)?;
+    if !cid_in_advertised_closures(store_path, cid, &ads)? {
+        return Ok(None);
+    }
     let store = arxos_core::store::ObjectStore::open(store_path)?;
     let cid = Cid::from_str(cid).map_err(|e| NetError::Protocol(e.to_string()))?;
     match store.get_bytes(&cid) {
@@ -278,6 +322,13 @@ pub fn serve_root_closure_with_options(
 ) -> Result<Vec<crate::protocol::ObjectBlob>> {
     use arxos_core::root::{get_root_closure_blobs_with_options, ClosureOptions};
 
+    let ads = building_ads_from_store(store_path)?;
+    if !ads.iter().any(|a| a.root_cid == root_cid) {
+        return Err(NetError::Protocol(
+            "root is not an advertised head".into(),
+        ));
+    }
+
     let store = arxos_core::store::ObjectStore::open(store_path)?;
     let root = Cid::from_str(root_cid).map_err(|e| NetError::Protocol(e.to_string()))?;
     let result = get_root_closure_blobs_with_options(
@@ -289,14 +340,25 @@ pub fn serve_root_closure_with_options(
         },
     )
     .map_err(|e| NetError::Core(e.to_string()))?;
-    let out = result
+    let mut total = 0usize;
+    let out: Vec<crate::protocol::ObjectBlob> = result
         .blobs
         .into_iter()
-        .map(|(cid, bytes)| crate::protocol::ObjectBlob {
-            cid: cid.to_string(),
-            bytes,
+        .map(|(cid, bytes)| {
+            total = total.saturating_add(bytes.len());
+            crate::protocol::ObjectBlob {
+                cid: cid.to_string(),
+                bytes,
+            }
         })
         .collect();
+    if total > crate::protocol::MAX_MESSAGE_BYTES as usize {
+        return Err(NetError::Protocol(format!(
+            "root closure {} bytes exceeds max frame {}",
+            total,
+            crate::protocol::MAX_MESSAGE_BYTES
+        )));
+    }
     Ok(out)
 }
 
@@ -669,13 +731,14 @@ mod tests {
             dir_edge.path(),
             &root,
             Some(bid.as_str()),
-            true,
+            false, // metadata-only cannot set head
             false,
             true,
+            Vec::new(),
         )
         .await
         .unwrap();
-        assert!(pull_edge.adopted.is_some());
+        assert!(pull_edge.adopted.is_none());
 
         // B full pull then offline entity update
         {
@@ -828,19 +891,38 @@ mod tests {
             )
             .unwrap();
 
+        let err = pull_root_with_options(
+            &node_b,
+            node_a.peer_id(),
+            dir_b.path(),
+            &root,
+            Some(bid.as_str()),
+            true,  // set_head
+            false,
+            true, // metadata_only
+            Vec::new(),
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("metadata-only"),
+            "set_head + metadata_only must fail, got {err}"
+        );
+
         let pull = pull_root_with_options(
             &node_b,
             node_a.peer_id(),
             dir_b.path(),
             &root,
             Some(bid.as_str()),
-            true,
+            false, // no-set-head
             false,
             true, // metadata_only
+            Vec::new(),
         )
         .await
         .unwrap();
-        assert!(pull.adopted.is_some());
+        assert!(pull.adopted.is_none());
 
         let store_b = arxos_core::store::ObjectStore::open(dir_b.path()).unwrap();
         assert!(
@@ -880,6 +962,7 @@ mod tests {
                 false,
                 false,
                 false,
+                Vec::new(),
             );
             let blocked = match r {
                 Err(e) => {
@@ -907,5 +990,67 @@ mod tests {
             status.success(),
             "pull ingest must fail closed while another writer holds store.lock; {status}"
         );
+    }
+
+    #[test]
+    fn serve_get_object_hides_cids_outside_advertised_closures() {
+        use arxos_core::object::{BlobBody, Object, ObjectBody};
+        use std::collections::BTreeMap;
+
+        let dir = tempdir().unwrap();
+        let mut repo =
+            BuildingRepository::init(dir.path(), Some("Advertised".into()), None).unwrap();
+        repo.capture_annotation(&AnnotationCapture::new("keep", Pose::default()))
+            .unwrap();
+        let commit = repo.commit(Some("head".into())).unwrap();
+        let head = commit.root_cid.to_string();
+        let orphan = {
+            let obj = Object::new(ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data: b"secret-orphan".to_vec(),
+                properties: BTreeMap::new(),
+            }));
+            repo.put_object(&obj).unwrap()
+        };
+        drop(repo);
+
+        let ads = building_ads_from_store(dir.path()).unwrap();
+        assert!(ads.iter().any(|a| a.root_cid == head));
+
+        assert!(serve_get_object(dir.path(), &head).unwrap().is_some());
+        assert!(
+            serve_get_object(dir.path(), &orphan.to_string())
+                .unwrap()
+                .is_none(),
+            "orphan CAS CID must not be served"
+        );
+        let err = serve_root_closure(dir.path(), &orphan.to_string()).unwrap_err();
+        assert!(
+            err.to_string().contains("advertised"),
+            "GetRootClosure of non-head must fail, got {err}"
+        );
+    }
+
+    #[test]
+    fn serve_root_closure_rejects_historical_non_head() {
+        let dir = tempdir().unwrap();
+        let mut repo =
+            BuildingRepository::init(dir.path(), Some("History".into()), None).unwrap();
+        let first = repo.head_root().unwrap();
+        repo.capture_annotation(&AnnotationCapture::new("later", Pose::default()))
+            .unwrap();
+        let second = repo.commit(Some("advance".into())).unwrap().root_cid;
+        drop(repo);
+
+        assert_ne!(first, second);
+        let err = serve_root_closure(dir.path(), &first.to_string()).unwrap_err();
+        assert!(
+            err.to_string().contains("advertised"),
+            "historical root must not be a GetRootClosure target, got {err}"
+        );
+        assert!(serve_root_closure(dir.path(), &second.to_string())
+            .unwrap()
+            .iter()
+            .any(|b| b.cid == second.to_string()));
     }
 }

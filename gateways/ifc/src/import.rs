@@ -10,7 +10,7 @@ use arxos_core::object::{
 };
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::RootBuilder;
-use arxos_core::{AdoptOptions, Cid, Keypair};
+use arxos_core::{Cid, Keypair};
 
 use crate::error::{IfcError, Result};
 use crate::parse::{
@@ -200,32 +200,21 @@ fn import_file(
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
-    let root_cid = if let Some(kp) = sign.or_else(|| repo.keypair()) {
-        let mut builder = RootBuilder::new(building_id.clone(), ts)
-            .objects(set)
-            .message("ifc import");
-        if let Some(prev) = repo.head_root() {
-            builder = builder.previous_root(prev);
-        }
-        let (root_obj, root_cid) = builder.build_signed(kp)?;
-        repo.put_object(&root_obj)?;
-        repo.adopt_root(root_cid)?;
-        Some(root_cid)
-    } else {
-        let mut body =
-            arxos_core::root::RootBody::new(building_id.clone(), repo.head_root(), set, ts);
-        body.message = Some("ifc import".into());
-        let obj = body.into_object(ts);
-        let root_cid = repo.put_object(&obj)?;
-        repo.adopt_root_with_options(
-            root_cid,
-            &AdoptOptions {
-                allow_untrusted: true,
-                allow_partial: false,
-            },
-        )?;
-        Some(root_cid)
+    let Some(kp) = sign.or_else(|| repo.keypair()) else {
+        return Err(IfcError::Core(
+            "refusing unsigned import; provide a device key (keys/device.seed)".into(),
+        ));
     };
+    let mut builder = RootBuilder::new(building_id.clone(), ts)
+        .objects(set)
+        .message("ifc import");
+    if let Some(prev) = repo.head_root() {
+        builder = builder.previous_root(prev);
+    }
+    let (root_obj, root_cid) = builder.build_signed(kp)?;
+    repo.put_object(&root_obj)?;
+    repo.adopt_root(root_cid)?;
+    let root_cid = Some(root_cid);
 
     Ok(ImportResult {
         building_id,

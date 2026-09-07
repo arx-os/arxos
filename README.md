@@ -29,7 +29,7 @@ Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do 
 
 - Capture on a LiDAR iPhone (RoomPlan) or with `arx capture`
 - Inspect the head, list entities, diagnostic scoring (`arx score`)
-- LAN pull over Iroh (`arxos/sync/1`) and mDNS; long-running `arxos-edge serve`
+- LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
 - Merge concurrent controller tips
 - USD and IFC export from the current head; import writes a new commit
 
@@ -39,7 +39,7 @@ non-controllers. A non-controller cannot commit official history
 
 ## Quick start
 
-Rust 1.75+ and Cargo.
+Rust 1.91+ and Cargo.
 
 ```bash
 export ARXOS_STORE=/tmp/arxos-store
@@ -68,9 +68,10 @@ open ios/ArxosApp/ArxosApp.xcodeproj
 ```
 
 Init a building, start a RoomPlan scan, stop. The app commits into
-`Documents/arxos-store`. AirDrop or copy that folder to a Mac and point `arx`
-at it with `--store`. The app is a replica with a camera, not a browser;
-network pull is not wired in the UI. Details: [ios/README.md](ios/README.md).
+Application Support (`arxos-store`, excluded from backup). Use **Export store…**
+to AirDrop a snapshot to a Mac and point `arx` at it with `--store`. The app is
+a replica with a camera, not a browser; network pull is not wired in the UI.
+Details: [ios/README.md](ios/README.md).
 
 ## Pull and merge
 
@@ -80,11 +81,12 @@ Serve prints a ticket and advertised heads, and holds `store.lock`:
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" net serve
 ```
 
-Default fetch adopts the pulled Root (first contact is TOFU; later pulls must
-fast-forward from this replica’s head):
+Default fetch adopts the pulled Root (first contact is TOFU unless you pin
+`--trust-controllers`; later pulls must fast-forward from this replica’s head):
 
 ```bash
 cargo run -q -p arxos-cli -- --store "$OTHER" net fetch --peer "$TICKET" --root "$CID"
+# pin a second replica: --trust-controllers "$ALICE_PK"
 ```
 
 `--no-set-head` stores the objects and leaves `head_root` unchanged. Merge the
@@ -109,7 +111,8 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" export usd "$BID" -o buildin
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" export ifc "$BID" -o building.ifc
 ```
 
-`arx import usd` / `arx import ifc` write a new Root and adopt it as head.
+`arx import usd` / `arx import ifc` write a new signed Root and adopt it as head
+(requires `keys/device.seed`).
 
 ## Layout
 
@@ -129,4 +132,4 @@ Writes, adopt, and ingest: [core/README.md](core/README.md).
 
 ## License
 
-Apache-2.0 or MIT, at your option.
+Apache-2.0 or MIT, at your option (`LICENSE` and `LICENSE-APACHE`).

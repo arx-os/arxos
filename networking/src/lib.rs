@@ -19,6 +19,9 @@
 
 #![allow(missing_docs)]
 
+// Keep the 1.12 pin live so `cargo update` cannot select tinyvec 1.13.
+use tinyvec as _;
+
 pub mod discovery;
 pub mod error;
 pub mod memory;

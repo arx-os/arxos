@@ -1,4 +1,4 @@
-//! Contributor scoring (DePIN oracle input on the data plane).
+//! Contributor scoring (diagnostic points; not a payment oracle).
 //!
 //! # Economic role
 //!
@@ -82,6 +82,8 @@ pub struct ScoreReport {
     pub total_objects: u64,
     /// Aggregate points (diagnostic; not fiat).
     pub total_score: f64,
+    /// Always true for this policy: scores are not a payment basis.
+    pub diagnostic_only: bool,
     pub contributors: Vec<ContributorScore>,
     /// Per-object contributions (for attribution dumps).
     pub contributions: Vec<Contribution>,
@@ -363,6 +365,7 @@ pub fn score_contributions_with_policy(
         root_cid,
         total_objects: contributions.len() as u64,
         total_score,
+        diagnostic_only: true,
         contributors,
         contributions,
     }
@@ -398,6 +401,7 @@ mod tests {
         let commit = repo.commit(Some("c".into())).unwrap();
         let report = score_root(&repo, &commit.root_cid, &ScoreWeights::default()).unwrap();
         assert_eq!(report.policy_version, DEFAULT_POLICY_VERSION);
+        assert!(report.diagnostic_only);
         assert!(report.total_score > 0.0);
         assert!(!report.contributors.is_empty());
         assert!(report.contributors[0].signed_valid >= 1);

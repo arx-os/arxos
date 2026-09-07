@@ -260,8 +260,8 @@ final class BuildingSession: ObservableObject {
     ///
     /// On Mac, unzip/copy into a path and run:
     ///   `arx --store /path/to/arxos-store building status <id>`
-    /// The live store is also visible under Files → On My iPhone → Arxos when
-    /// file sharing is enabled (Info.plist UIFileSharingEnabled).
+    /// The live store is in Application Support (not Files.app / iCloud).
+    /// Use this export path (or AirDrop) to copy a snapshot to a Mac.
     func exportStoreForShare() throws -> URL {
         let fm = FileManager.default
         let src = URL(fileURLWithPath: storePath, isDirectory: true)
@@ -281,7 +281,16 @@ final class BuildingSession: ObservableObject {
         if fm.fileExists(atPath: dirCopy.path) {
             try fm.removeItem(at: dirCopy)
         }
-        try fm.copyItem(at: src, to: dirCopy)
+        try fm.createDirectory(at: dirCopy, withIntermediateDirectories: true)
+        for name in try fm.contentsOfDirectory(atPath: src.path) {
+            if name == "keys" {
+                continue
+            }
+            try fm.copyItem(
+                at: src.appendingPathComponent(name),
+                to: dirCopy.appendingPathComponent(name)
+            )
+        }
         return dirCopy
     }
 

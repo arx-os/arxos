@@ -1,6 +1,6 @@
 # Arxos iOS client
 
-Physical iPhone capture client: **RoomPlan → ingest → auto-commit → CAS in Documents**.
+Physical iPhone capture client: **RoomPlan → ingest → auto-commit → CAS in Application Support**.
 
 ## Requirements
 
@@ -59,7 +59,7 @@ In Xcode:
 2. **Start RoomPlan scan** → walk the room → **Stop**.
 3. Ingest + **auto-commit** runs (status shows committed root).
 4. Force-quit → reopen → same building and head.
-5. **Export store…** (or Files → On My iPhone → Arxos → `arxos-store`) to a Mac.
+5. **Export store…** to AirDrop / share a snapshot to a Mac. The live store is not in Files.app.
 
 ## 3. Inspect on Mac CLI
 
@@ -79,10 +79,10 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity show "$BID" <entity-i
 The store path on device is:
 
 ```text
-Documents/arxos-store
+Application Support/arxos-store
 ```
 
-(`UIFileSharingEnabled` is on so Finder can show it when the phone is connected.)
+The directory is excluded from backup and uses complete data protection. Copy it with **Export store…**, not Files.app. The controller seed lives in the Keychain (`WhenUnlockedThisDeviceOnly`); export snapshots omit `keys/`.
 
 ## Layout
 

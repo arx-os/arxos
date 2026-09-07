@@ -116,7 +116,7 @@ impl BuildingRepository {
             builder = builder.message(msg);
         }
 
-        let (root_obj, root_cid) = builder.build_signed(&kp)?;
+        let (root_obj, root_cid) = builder.build_signed(kp)?;
         // Fail closed: author must be in Building.controller_keys of the new active set.
         {
             let root = RootBody::from_object(&root_obj)?;

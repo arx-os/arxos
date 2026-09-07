@@ -2,17 +2,20 @@
 //!
 //! Rules:
 //! 1. **Three-way set merge** relative to the nearest common ancestor on the
-//!    `previous_root` chain (not naive union). Concurrent removals are preserved;
-//!    concurrent adds are unioned. If one tip is an ancestor of the other, the
-//!    descendant wins (fast-forward).
+//!    `previous_root ∪ merge_parents` DAG (not naive union). Concurrent
+//!    removals are preserved; concurrent adds are unioned. If one tip is a
+//!    DAG ancestor of the other, the descendant wins (fast-forward).
 //! 2. **Entity collapse**: at most one version CID per [`crate::entity::EntityId`].
 //! 3. **Building collapse**: at most one Building object per `building_id`
 //!    (controller rotation produces successive Building CIDs).
 //! 4. **Annotation proximity dedupe**: nearby identical text → keep newer.
 //! 5. **Annotation conflict keep-both**: nearby different text → keep both.
 //! 6. Spatial index is **rebuilt** after merge (not merged node-by-node).
+//! 7. With [`MergeReplica`], a remote parent whose authors are not local
+//!    controllers is rejected (Authorization). Untrusted objects cannot enter
+//!    the merged set. `plan_merge` remains a dry-run without this gate.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::capture::pose_distance;
 use crate::cid::Cid;
@@ -25,11 +28,13 @@ use crate::spatial;
 use crate::store::{ObjectRead, ObjectWrite};
 
 /// Replica view for merge: local head is trusted; a remote parent whose
-/// authors are not local controllers cannot supply the winning Building.
+/// authors were never controllers on this replica cannot supply **objects**
+/// (not only the winning Building).
 ///
-/// Concurrent honest devices that are still on `controller_keys` remain
-/// eligible (`controller_add_survives_sync_and_enforce`). Ancestry is not
-/// required here — that is adopt's job.
+/// Concurrent honest devices remain eligible, including a key Alice later
+/// dropped (`controller_add_survives_sync_and_enforce`). Ancestry is not
+/// required here — that is adopt's job. Winning Building collapse still uses
+/// the *current* local controller set.
 #[derive(Debug, Clone)]
 pub struct MergeReplica {
     pub local_head: Cid,
@@ -67,7 +72,7 @@ fn normalize_text(s: &str) -> String {
 struct AnnMeta {
     cid: Cid,
     text: String,
-    pose: Pose,
+    pose: Option<Pose>,
     created: u64,
 }
 
@@ -89,7 +94,7 @@ fn collect_annotations<R: ObjectRead + ?Sized>(
             out.push(AnnMeta {
                 cid: *cid,
                 text: a.text.clone().unwrap_or_default(),
-                pose: a.pose.clone().unwrap_or_default(),
+                pose: a.pose.clone(),
                 created: obj.header.created,
             });
         }
@@ -112,7 +117,11 @@ pub fn annotation_dedupe_drops<R: ObjectRead + ?Sized>(
             if drop.contains(&anns[j].cid) {
                 continue;
             }
-            let d = pose_distance(&anns[i].pose, &anns[j].pose);
+            let (Some(pi), Some(pj)) = (&anns[i].pose, &anns[j].pose) else {
+                // Pose-less annotations are not at the origin; skip distance dedupe.
+                continue;
+            };
+            let d = pose_distance(pi, pj);
             if d > ANNOTATION_DEDUP_M {
                 continue;
             }
@@ -137,25 +146,31 @@ pub fn annotation_dedupe_drops<R: ObjectRead + ?Sized>(
     Ok(drop)
 }
 
-/// Walk `previous_root` from `tip` collecting ancestor CIDs (including tip).
-fn ancestor_chain<R: ObjectRead + ?Sized>(store: &R, tip: Cid) -> Result<Vec<Cid>> {
-    let mut chain = Vec::new();
+/// Ancestors of `tip` including `tip`, walking `previous_root ∪ merge_parents`.
+///
+/// Order is BFS from the tip so the first intersection with another tip's
+/// ancestor set is a nearest common ancestor on the merge DAG.
+fn ancestor_dag<R: ObjectRead + ?Sized>(store: &R, tip: Cid) -> Result<Vec<Cid>> {
+    let mut order = Vec::new();
     let mut visited = BTreeSet::new();
-    let mut cur = Some(tip);
-    while let Some(cid) = cur {
+    let mut queue = VecDeque::from([tip]);
+    while let Some(cid) = queue.pop_front() {
         if !visited.insert(cid) {
-            return Err(Error::Validation(
-                "cyclic root chain during merge LCA".into(),
-            ));
+            continue;
         }
-        chain.push(cid);
+        order.push(cid);
         let (_, body) = load_root(store, &cid)?;
-        cur = body.previous_root;
+        if let Some(prev) = body.previous_root {
+            queue.push_back(prev);
+        }
+        for p in &body.merge_parents {
+            queue.push_back(*p);
+        }
     }
-    Ok(chain)
+    Ok(order)
 }
 
-/// Nearest common ancestor of two root tips on the linear `previous_root` chain.
+/// Nearest common ancestor of two root tips on the merge DAG.
 ///
 /// Returns `None` only when histories are disjoint (no shared ancestor).
 pub fn find_common_ancestor<R: ObjectRead + ?Sized>(
@@ -163,9 +178,8 @@ pub fn find_common_ancestor<R: ObjectRead + ?Sized>(
     root_a: Cid,
     root_b: Cid,
 ) -> Result<Option<Cid>> {
-    let chain_a = ancestor_chain(store, root_a)?;
-    let set_a: BTreeSet<Cid> = chain_a.into_iter().collect();
-    for cid in ancestor_chain(store, root_b)? {
+    let set_a: BTreeSet<Cid> = ancestor_dag(store, root_a)?.into_iter().collect();
+    for cid in ancestor_dag(store, root_b)? {
         if set_a.contains(&cid) {
             return Ok(Some(cid));
         }
@@ -173,9 +187,9 @@ pub fn find_common_ancestor<R: ObjectRead + ?Sized>(
     Ok(None)
 }
 
-/// True if `ancestor` appears on the `previous_root` chain of `desc` (inclusive).
+/// True if `ancestor` appears on the merge DAG of `desc` (inclusive).
 fn is_ancestor_of<R: ObjectRead + ?Sized>(store: &R, ancestor: Cid, desc: Cid) -> Result<bool> {
-    Ok(ancestor_chain(store, desc)?.contains(&ancestor))
+    Ok(ancestor_dag(store, desc)?.contains(&ancestor))
 }
 
 /// Three-way object-set merge of two concurrent tips.
@@ -233,8 +247,38 @@ fn authors_are_local_controllers(root: &RootBody, local_keys: &[crate::crypto::P
             .all(|a| local_keys.iter().any(|k| k == &a.public_key))
 }
 
+/// Controller keys this replica has ever trusted: current Building, plus every
+/// Building on the local `previous_root` chain. A concurrent tip signed by a
+/// key Alice later dropped is still mergeable; Mallory never appears here.
+fn replica_authorized_keys<R: ObjectRead + ?Sized>(
+    store: &R,
+    building_id: &BuildingId,
+    replica: &MergeReplica,
+) -> Result<Vec<crate::crypto::PublicKey>> {
+    let mut keys = resolve_controller_keys(store, &replica.local_active, building_id)?;
+    for cid in ancestor_dag(store, replica.local_head)? {
+        let (_, body) = load_root(store, &cid)?;
+        let active = match body.materialize_active_objects(store) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        match resolve_controller_keys(store, &active, building_id) {
+            Ok(more) => {
+                for k in more {
+                    if !keys.iter().any(|e| e == &k) {
+                        keys.push(k);
+                    }
+                }
+            }
+            Err(_) => continue,
+        }
+    }
+    Ok(keys)
+}
+
 /// Buildings allowed to win collapse: local replica set, plus Buildings from
 /// a remote parent only when every remote author is a local controller.
+#[allow(clippy::too_many_arguments)]
 fn eligible_building_winners<R: ObjectRead + ?Sized>(
     store: &R,
     building_id: &BuildingId,
@@ -346,7 +390,8 @@ pub fn merge_roots<W: ObjectWrite + ?Sized>(
     )
 }
 
-/// Merge with replica trust: untrusted remote Buildings cannot win collapse.
+/// Merge with replica trust: a remote parent that is not signed by local
+/// controllers is rejected; untrusted objects never enter the merged set.
 pub fn merge_roots_with_replica<W: ObjectWrite + ?Sized>(
     store: &W,
     root_a: Cid,
@@ -372,6 +417,21 @@ pub fn merge_roots_with_replica<W: ObjectWrite + ?Sized>(
     // win) is applied below when `replica` is set; ancestry is adopt's job.
     a.verify_with_store(store)?;
     b.verify_with_store(store)?;
+
+    if let Some(rep) = replica {
+        let authorized = replica_authorized_keys(store, &a.building_id, rep)?;
+        for (cid, body) in [(root_a, &a), (root_b, &b)] {
+            if cid == rep.local_head {
+                continue;
+            }
+            if !authors_are_local_controllers(body, &authorized) {
+                return Err(Error::Authorization(
+                    "remote parent authors are not local controllers; refusing to merge untrusted objects"
+                        .into(),
+                ));
+            }
+        }
+    }
 
     let active_a = a.materialize_active_objects(store)?;
     let active_b = b.materialize_active_objects(store)?;
@@ -552,6 +612,7 @@ mod tests {
     use crate::object::{BuildingBody, BuildingId, ObjectBody, Pose};
     use crate::repository::BuildingRepository;
     use crate::store::ObjectStore;
+    use crate::Error;
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 
@@ -834,11 +895,196 @@ mod tests {
             .unwrap();
         repo.put_object(&fork).unwrap();
 
-        repo.merge_root(fork_cid, Some("merge mallory".into()))
-            .unwrap();
+        let err = repo
+            .merge_root(fork_cid, Some("merge mallory".into()))
+            .unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
         let keys = repo.controller_keys().unwrap();
         assert_eq!(keys.len(), 1, "{keys:?}");
         assert!(keys.contains(&alice_pk));
         assert!(!keys.contains(&mallory.public_key()));
+    }
+
+    #[test]
+    fn merge_untrusted_parent_cannot_add_objects() {
+        let dir = tempdir().unwrap();
+        let mut repo = BuildingRepository::init(dir.path(), Some("Alice".into()), None).unwrap();
+        let alice_pk = repo.keypair().unwrap().public_key();
+        let bid = repo.building_id().clone();
+        let alice_head = repo.head_root().unwrap();
+        let alice_objects: BTreeSet<Cid> = repo.head_object_cids().unwrap().into_iter().collect();
+        let mallory = Keypair::generate();
+
+        let b_m = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: Some("Mallory".into()),
+                controller_keys: vec![mallory.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            u64::MAX / 2,
+        );
+        let b_m_cid = repo.put_object(&b_m).unwrap();
+        let mut space = space_object(&SpaceCapture {
+            entity_id: Some(EntityId::new()),
+            name: Some("mallory space".into()),
+            pose: Pose::default(),
+            bounds: None,
+            floor: None,
+            properties: BTreeMap::new(),
+        });
+        space.sign(&mallory).unwrap();
+        let space_cid = repo.put_object(&space).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(b_m_cid);
+        objects.insert(space_cid);
+        let (fork, fork_cid) = RootBuilder::new(bid, 50)
+            .objects(objects)
+            .message("mallory")
+            .build_signed(&mallory)
+            .unwrap();
+        repo.put_object(&fork).unwrap();
+
+        let err = repo
+            .merge_root(fork_cid, Some("merge mallory space".into()))
+            .unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(_)),
+            "expected Authorization, got {err:?}"
+        );
+        assert_eq!(repo.head_root(), Some(alice_head));
+        let active: BTreeSet<Cid> = repo.head_object_cids().unwrap().into_iter().collect();
+        assert_eq!(active, alice_objects);
+        assert!(!active.contains(&space_cid));
+        let keys = repo.controller_keys().unwrap();
+        assert!(keys.contains(&alice_pk));
+        assert!(!keys.contains(&mallory.public_key()));
+    }
+
+    #[test]
+    fn merge_parents_are_dag_ancestors() {
+        // M = merge(A,B) with previous_root=A. A must be an ancestor of M via
+        // merge_parents, so merging A with M fast-forwards instead of unioning.
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = put_building(&store, &bid, &kp);
+
+        let mut space = space_object(&SpaceCapture {
+            entity_id: Some(EntityId::new()),
+            name: Some("x".into()),
+            pose: Pose::default(),
+            bounds: None,
+            floor: None,
+            properties: BTreeMap::new(),
+        });
+        space.sign(&kp).unwrap();
+        let space_cid = store.put(&space).unwrap();
+
+        let g_set: BTreeSet<Cid> = [building, space_cid].into_iter().collect();
+        let (rg, g) = RootBuilder::new(bid.clone(), 1000)
+            .objects(g_set)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rg).unwrap();
+
+        let a_set: BTreeSet<Cid> = [building].into_iter().collect();
+        let (ra, a) = RootBuilder::new(bid.clone(), 1001)
+            .previous_root(g)
+            .objects(a_set)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&ra).unwrap();
+
+        let b_set: BTreeSet<Cid> = [building, space_cid].into_iter().collect();
+        let (rb, b) = RootBuilder::new(bid.clone(), 2000)
+            .previous_root(g)
+            .objects(b_set)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rb).unwrap();
+
+        let m = merge_roots(&store, a, b, &kp, None, false).unwrap();
+        assert!(
+            is_ancestor_of(&store, a, m.root_cid).unwrap(),
+            "merge parent A must be a DAG ancestor of the merge commit"
+        );
+        let lca = find_common_ancestor(&store, a, m.root_cid).unwrap();
+        assert_eq!(lca, Some(a), "LCA(A, merge(A,B)) must be A, not genesis");
+
+        let merged_again = merge_roots(&store, a, m.root_cid, &kp, None, false).unwrap();
+        let active = {
+            let root = store.get(&merged_again.root_cid).unwrap();
+            RootBody::from_object(&root)
+                .unwrap()
+                .materialize_active_objects(&store)
+                .unwrap()
+        };
+        assert!(
+            !active.contains(&space_cid),
+            "deleted space must not resurrect when re-merging a merge parent"
+        );
+    }
+
+    #[test]
+    fn pose_less_annotations_are_not_deduped_at_origin() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = put_building(&store, &bid, &kp);
+
+        let mut a1 = Object::new_with_created(
+            ObjectBody::Annotation(crate::object::AnnotationBody {
+                text: Some("same".into()),
+                transcript: None,
+                media_ref: None,
+                pose: None,
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+            10,
+        );
+        a1.sign(&kp).unwrap();
+        let c1 = store.put(&a1).unwrap();
+
+        let mut a2 = Object::new_with_created(
+            ObjectBody::Annotation(crate::object::AnnotationBody {
+                text: Some("same".into()),
+                transcript: None,
+                media_ref: None,
+                pose: None,
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+            20,
+        );
+        a2.sign(&kp).unwrap();
+        let c2 = store.put(&a2).unwrap();
+
+        let set_a: BTreeSet<Cid> = [building, c1].into_iter().collect();
+        let set_b: BTreeSet<Cid> = [building, c2].into_iter().collect();
+        let (ra, ca) = RootBuilder::new(bid.clone(), 1000)
+            .objects(set_a)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&ra).unwrap();
+        let (rb, cb) = RootBuilder::new(bid, 1001)
+            .objects(set_b)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&rb).unwrap();
+
+        let merged = merge_roots(&store, ca, cb, &kp, None, false).unwrap();
+        let root = store.get(&merged.root_cid).unwrap();
+        let active = RootBody::from_object(&root)
+            .unwrap()
+            .materialize_active_objects(&store)
+            .unwrap();
+        assert!(active.contains(&c1) && active.contains(&c2));
     }
 }

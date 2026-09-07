@@ -203,7 +203,8 @@ fn announce_mdns(
     let name = instance
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("arxos-edge-{}", &peer_id[..8.min(peer_id.len())]));
-    d.announce(&name, peer_id, 0, Some(ticket), ads)
+    let _ = ticket;
+    d.announce(&name, peer_id, 0, None, ads)
         .map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(d)
 }

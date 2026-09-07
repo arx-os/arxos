@@ -35,3 +35,4 @@ ios/ArxosApp/Vendor/include/
 # Misc
 *.log
 .coverage/
+graphify-out/

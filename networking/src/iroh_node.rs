@@ -65,7 +65,8 @@ impl IrohNode {
     }
 
     async fn bind_with_secret(store_path: PathBuf, secret: SecretKey) -> Result<Self> {
-        let endpoint = Endpoint::builder(presets::N0)
+        // LAN default: n0 discovery/DNS, no public relays. Tickets are the ACL.
+        let endpoint = Endpoint::builder(presets::N0DisableRelay)
             .secret_key(secret)
             .alpns(vec![ARXOS_ALPN.to_vec()])
             .bind()
@@ -95,7 +96,7 @@ impl IrohNode {
         &self.store_path
     }
 
-    /// Endpoint address for dialing (includes home relay when available).
+    /// Endpoint address for dialing (direct addrs; relays disabled by default).
     pub async fn endpoint_addr(&self) -> EndpointAddr {
         self.endpoint.addr()
     }
@@ -158,11 +159,18 @@ impl IrohNode {
 
     async fn handle_message(&self, msg: Message) -> Message {
         match msg {
-            Message::Hello { .. } => Message::Hello {
-                protocol_version: PROTOCOL_VERSION,
-                peer_id: self.peer_id.clone(),
-                buildings: self.buildings.read().await.clone(),
-            },
+            Message::Hello { .. } => {
+                // Ads are read-only from on-disk BuildingRecord heads.
+                let buildings = match building_ads_from_store(&self.store_path) {
+                    Ok(ads) => ads,
+                    Err(_) => self.buildings.read().await.clone(),
+                };
+                Message::Hello {
+                    protocol_version: PROTOCOL_VERSION,
+                    peer_id: self.peer_id.clone(),
+                    buildings,
+                }
+            }
             Message::GetObject { cid } => match serve_get_object(&self.store_path, &cid) {
                 Ok(Some(bytes)) => Message::GetObjectOk { cid, bytes },
                 Ok(None) => Message::GetObjectMissing { cid },
@@ -183,28 +191,9 @@ impl IrohNode {
                     message: e.to_string(),
                 },
             },
-            Message::AnnounceRoot {
-                building_id,
-                root_cid,
-                object_count,
-                ..
-            } => {
-                let mut ads = self.buildings.write().await;
-                if let Some(ad) = ads.iter_mut().find(|a| a.building_id == building_id) {
-                    ad.root_cid = root_cid;
-                    ad.object_count = object_count;
-                } else {
-                    ads.push(BuildingHeadAd {
-                        building_id,
-                        root_cid,
-                        name: None,
-                        object_count,
-                    });
-                }
-                Message::Ok {
-                    detail: Some("announced".into()),
-                }
-            }
+            Message::AnnounceRoot { .. } => Message::Ok {
+                detail: Some("ignored: advertisements are local-store only".into()),
+            },
             other => Message::Error {
                 message: format!("unexpected request: {other:?}"),
             },

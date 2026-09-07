@@ -53,6 +53,8 @@ fn ifc_roundtrip_identity() {
 
     let ifc = export_building_ifc(path, &bid, &ExportOptions::default()).unwrap();
     assert!(ifc.contains("ISO-10303-21"));
+    assert!(ifc.contains("ViewDefinition [ArxosAsBuiltView]"));
+    assert!(!ifc.contains("CoordinationView"));
     assert!(ifc.contains("IFCBUILDING"));
     assert!(ifc.contains("Pset_ArxosIdentity"));
     assert!(ifc.contains("IFCANNOTATION"));
@@ -86,4 +88,27 @@ fn ifc_roundtrip_identity() {
         }
     }
     assert!(found_source, "expected arxos_source_cid on imported objects");
+}
+
+#[test]
+fn ifc_unsigned_import_refused() {
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let mut repo = BuildingRepository::init(path, Some("IFC Hall".into()), None).unwrap();
+    let bid = repo.building_id().clone();
+    repo.capture_annotation(&AnnotationCapture::new(
+        "note",
+        Pose::default(),
+    ))
+    .unwrap();
+    let _ = repo.commit(Some("src".into())).unwrap();
+    drop(repo);
+
+    let ifc = export_building_ifc(path, &bid, &ExportOptions::default()).unwrap();
+    let dir2 = tempdir().unwrap();
+    let err = import_ifc(dir2.path(), &ifc, None).unwrap_err();
+    assert!(
+        err.to_string().contains("unsigned") || err.to_string().contains("device key"),
+        "expected unsigned import refusal, got {err}"
+    );
 }

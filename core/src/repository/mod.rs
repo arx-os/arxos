@@ -84,18 +84,23 @@ pub struct CommitResult {
 /// Options for adopting a remote root.
 ///
 /// Default is production pull: fail-closed self-consistency **and** replica
-/// continuity. [`Self::allow_untrusted`] is import/debug (IFC/USD unsigned
-/// roots, explicit FFI flags), not the network default.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+/// continuity. [`Self::allow_untrusted`] is an explicit disaster-recovery hatch
+/// (not import, not the network default). [`Self::allow_partial`] cannot install
+/// a head — adopt refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AdoptOptions {
     /// Skip Root-law and replica-continuity checks.
     ///
     /// If false (default), adopt requires [`crate::root::verify_continuous_with_local`].
     /// If true, unsigned / unauthorized / forked roots may still become head.
+    /// This is not a warning: the head moves.
     pub allow_untrusted: bool,
-    /// Allow adopting a root even when some active objects (or the spatial index)
-    /// are missing from the local store. Default is false (fail closed).
+    /// Historical flag. Adopt **rejects** `allow_partial = true`: an incomplete
+    /// closure cannot become head. Metadata-only ingest must use `set_head = false`.
     pub allow_partial: bool,
+    /// Exact `Building.controller_keys` required on first-contact TOFU.
+    /// Empty (default) is classic TOFU. Ignored once this replica has a head.
+    pub expected_controllers: Vec<crate::crypto::PublicKey>,
 }
 
 /// Building-scoped ingest of already-canonical objects (sync / import).
@@ -132,10 +137,31 @@ mod query;
 
 impl BuildingRepository {
     /// Initialize a new building repository in `store_path`.
+    ///
+    /// Writes `keys/device.seed`. For in-memory / Keychain identity, use
+    /// [`Self::init_ephemeral`].
     pub fn init(
         store_path: impl AsRef<Path>,
         name: Option<String>,
         keypair: Option<Keypair>,
+    ) -> Result<Self> {
+        Self::init_inner(store_path, name, keypair, true)
+    }
+
+    /// Initialize a building using `keypair` without writing `keys/device.seed`.
+    pub fn init_ephemeral(
+        store_path: impl AsRef<Path>,
+        name: Option<String>,
+        keypair: Keypair,
+    ) -> Result<Self> {
+        Self::init_inner(store_path, name, Some(keypair), false)
+    }
+
+    fn init_inner(
+        store_path: impl AsRef<Path>,
+        name: Option<String>,
+        keypair: Option<Keypair>,
+        persist_seed: bool,
     ) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
         let write_lock = store.try_lock_exclusive()?;
@@ -144,7 +170,9 @@ impl BuildingRepository {
 
         let building_id = BuildingId::new();
         let kp = keypair.unwrap_or_else(Keypair::generate);
-        Self::write_seed(store.root(), &kp)?;
+        if persist_seed {
+            Self::write_seed(store.root(), &kp)?;
+        }
 
         let mut building_obj = Object::new_with_created(
             ObjectBody::Building(BuildingBody {
@@ -340,6 +368,11 @@ impl BuildingRepository {
 
     pub fn keypair(&self) -> Option<&Keypair> {
         self.keypair.as_ref()
+    }
+
+    /// Replace the session signing key without writing `keys/device.seed`.
+    pub fn set_keypair(&mut self, keypair: Keypair) {
+        self.keypair = Some(keypair);
     }
 
     /// Capture a space → put → stage.
@@ -1054,7 +1087,7 @@ mod tests {
             unsigned_root_cid,
             &AdoptOptions {
                 allow_untrusted: true,
-                allow_partial: false,
+                ..Default::default()
             },
         );
         assert!(res.is_ok());
@@ -1089,16 +1122,22 @@ mod tests {
             "expected NotFound for incomplete adopt, got {err:?}"
         );
 
-        // Explicit allow_partial still needs authz unless also allow_untrusted.
-        // Building is present so authz can succeed; ghost remains missing.
-        let res = repo.adopt_root_with_options(
-            root_cid,
-            &AdoptOptions {
-                allow_untrusted: false,
-                allow_partial: true,
-            },
+        // allow_partial must not install an incomplete head.
+        let err = repo
+            .adopt_root_with_options(
+                root_cid,
+                &AdoptOptions {
+                    allow_untrusted: false,
+                    allow_partial: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap_err();
+        assert!(
+            matches!(err, Error::Validation(_)),
+            "expected Validation refusing allow_partial head, got {err:?}"
         );
-        assert!(res.is_ok(), "{res:?}");
+        assert_eq!(repo.head_root(), Some(local_head));
     }
 
     #[test]
@@ -1243,6 +1282,16 @@ mod tests {
             matches!(err, Error::Authorization(_)),
             "expected Authorization, got {err:?}"
         );
+    }
+
+    #[test]
+    fn init_ephemeral_does_not_write_device_seed() {
+        let dir = tempdir().unwrap();
+        let kp = Keypair::generate();
+        let repo = BuildingRepository::init_ephemeral(dir.path(), Some("Eph".into()), kp).unwrap();
+        assert!(!dir.path().join("keys").join("device.seed").exists());
+        assert!(repo.keypair().is_some());
+        assert!(repo.head_root().is_some());
     }
 
     #[test]

@@ -145,4 +145,16 @@ mod tests {
         assert!(decode_message(&enc[..3]).unwrap().is_none());
         assert!(decode_message(&enc[..enc.len() - 1]).unwrap().is_none());
     }
+
+    #[test]
+    fn decode_rejects_oversize_length_prefix() {
+        let len = MAX_MESSAGE_BYTES + 1;
+        let mut buf = len.to_be_bytes().to_vec();
+        buf.extend_from_slice(&[0u8; 16]);
+        let err = decode_message(&buf).unwrap_err();
+        assert!(
+            err.contains("exceeds max"),
+            "expected oversize reject, got {err}"
+        );
+    }
 }

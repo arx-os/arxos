@@ -7,14 +7,14 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use arxos_core::attest::{AttestationStatement, AttestationVerifier, DefaultAttestationVerifier};
+use arxos_core::attest::{AttestationStatement, AttestationVerifier, MockAttestationVerifier};
 use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::merge::plan_merge;
 use arxos_core::object::{
     AnnotationBody, BlobBody, BuildingBody, BuildingId, Object, ObjectBody, ObjectType, Pose,
 };
 use arxos_core::repository::BuildingRepository;
-use arxos_core::root::{RootBody, RootBuilder};
+use arxos_core::root::{ClosureOptions, RootBody, RootBuilder, RootClosure};
 use arxos_core::scoring::score_root;
 use arxos_core::spatial::QueryVolume;
 use arxos_core::store::ObjectStore;
@@ -78,7 +78,7 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                             let instance =
                                 format!("arxos-{}", &node.peer_id()[..8.min(node.peer_id().len())]);
                             if let Err(e) =
-                                d.announce(&instance, node.peer_id(), 11223, Some(&ticket), &ads)
+                                d.announce(&instance, node.peer_id(), 11223, None, &ads)
                             {
                                 eprintln!("warning: mDNS announce failed: {e}");
                             } else {
@@ -125,7 +125,19 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 set_head,
                 allow_untrusted,
                 metadata_only,
+                trust_controllers,
             } => {
+                if metadata_only && set_head {
+                    bail!("--metadata-only cannot adopt as head; pass --no-set-head");
+                }
+                let expected_controllers: Vec<arxos_core::PublicKey> = trust_controllers
+                    .iter()
+                    .map(|s| {
+                        s.parse()
+                            .map_err(|e: arxos_core::Error| anyhow::anyhow!("{e}"))
+                    })
+                    .collect::<anyhow::Result<Vec<_>>>()
+                    .context("parse --trust-controllers")?;
                 // Ephemeral client node (own store path for outbound).
                 let node = IrohNode::bind(&cli.store)
                     .await
@@ -139,6 +151,7 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                     set_head,
                     allow_untrusted,
                     metadata_only,
+                    expected_controllers,
                 )
                 .await
                 .context("pull root")?;
@@ -149,6 +162,12 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                     println!("adopted_head={}", adopted.root_cid);
                     println!("building_id={}", adopted.building_id);
                     println!("object_count={}", adopted.object_count);
+                    if adopted.continuity == Some(arxos_core::ContinuityOutcome::FirstTrust)
+                    {
+                        println!(
+                            "warning=first-contact TOFU; pin this replica with --trust-controllers"
+                        );
+                    }
                 }
                 node.close().await;
             }
@@ -1250,10 +1269,14 @@ pub fn run_sync(cli: Cli) -> Result<()> {
         },
         Commands::Merge { command } => match command {
             MergeCommands::Plan { root_a, root_b } => {
-                let store = ObjectStore::open(&cli.store)?;
                 let a = Cid::from_str(&root_a)?;
                 let b = Cid::from_str(&root_b)?;
-                let plan = plan_merge(&store, a, b)?;
+                let peek = ObjectStore::open(&cli.store)?;
+                let obj = peek.get(&a)?;
+                let bid = RootBody::from_object(&obj)?.building_id.clone();
+                drop(peek);
+                let repo = BuildingRepository::open_read(&cli.store, &bid)?;
+                let plan = plan_merge(&repo, a, b)?;
                 println!("building_id={}", plan.building_id);
                 println!("union_size={}", plan.union_size);
                 println!("would_dedupe={}", plan.would_dedupe);
@@ -1354,9 +1377,11 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             }
         }
         Commands::Verify { root, json } => {
-            let store = ObjectStore::open(&cli.store)?;
             let cid = Cid::from_str(&root)?;
-            let report = verify_root_transition(&store, &cid)?;
+            let store = ObjectStore::open(&cli.store)?;
+            let closure = RootClosure::collect(&store, &cid, &ClosureOptions::default())?;
+            let view = closure.as_read();
+            let report = verify_root_transition(&view, &cid)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -1379,7 +1404,8 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             // Ensure subject exists
             let _ = store.get(&root_cid)?;
             let stmt = AttestationStatement::mock(root_cid, &device_id);
-            let verdict = DefaultAttestationVerifier::default().verify(&stmt)?;
+            // Diagnostic only: mock is not a production trust path.
+            let verdict = MockAttestationVerifier.verify(&stmt)?;
             if !verdict.valid {
                 bail!("attestation invalid: {}", verdict.detail);
             }
@@ -1400,19 +1426,22 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             println!("attest_cid={cid}");
             println!("subject={root}");
             println!("device_id={device_id}");
+            println!("kind=mock");
+            println!("note=diagnostic_only_not_device_authenticity");
             println!("detail={}", verdict.detail);
         }
         Commands::Import { command } => match command {
             ImportCommands::Usd { file, sign } => {
+                if !sign {
+                    bail!("unsigned import is not supported; omit --sign=false");
+                }
                 let text = fs::read_to_string(&file)
                     .with_context(|| format!("read {}", file.display()))?;
-                let kp = if sign {
-                    crate::util::load_device_keypair(&cli.store)
-                } else {
-                    None
-                };
+                let kp = crate::util::load_device_keypair(&cli.store).ok_or_else(|| {
+                    anyhow::anyhow!("refusing unsigned import: missing keys/device.seed")
+                })?;
                 let res =
-                    import_usda(&cli.store, &text, kp.as_ref()).with_context(|| "usd import")?;
+                    import_usda(&cli.store, &text, Some(&kp)).with_context(|| "usd import")?;
                 println!("building_id={}", res.building_id);
                 println!("objects={}", res.object_cids.len());
                 println!(
@@ -1426,15 +1455,16 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 }
             }
             ImportCommands::Ifc { file, sign } => {
+                if !sign {
+                    bail!("unsigned import is not supported; omit --sign=false");
+                }
                 let text = fs::read_to_string(&file)
                     .with_context(|| format!("read {}", file.display()))?;
-                let kp = if sign {
-                    crate::util::load_device_keypair(&cli.store)
-                } else {
-                    None
-                };
+                let kp = crate::util::load_device_keypair(&cli.store).ok_or_else(|| {
+                    anyhow::anyhow!("refusing unsigned import: missing keys/device.seed")
+                })?;
                 let res =
-                    import_ifc(&cli.store, &text, kp.as_ref()).with_context(|| "ifc import")?;
+                    import_ifc(&cli.store, &text, Some(&kp)).with_context(|| "ifc import")?;
                 println!("building_id={}", res.building_id);
                 println!("objects={}", res.object_cids.len());
                 println!(

@@ -249,7 +249,21 @@ pub struct DefaultAttestationVerifier {
 impl AttestationVerifier for DefaultAttestationVerifier {
     fn verify(&self, statement: &AttestationStatement) -> Result<AttestationVerdict> {
         match statement.kind {
-            AttestationKind::Mock => self.mock.verify(statement),
+            AttestationKind::Mock => {
+                #[cfg(test)]
+                {
+                    self.mock.verify(statement)
+                }
+                #[cfg(not(test))]
+                {
+                    Ok(AttestationVerdict {
+                        valid: false,
+                        kind: statement.kind,
+                        device_id: statement.device_id.clone(),
+                        detail: "mock attestation is not valid outside tests".into(),
+                    })
+                }
+            }
             AttestationKind::AppAttest => self.app_attest.verify(statement),
             AttestationKind::Other => Ok(AttestationVerdict {
                 valid: false,
@@ -317,6 +331,16 @@ mod tests {
         }
         .verify(&stmt)
         .unwrap();
+        assert!(v.valid);
+    }
+
+    #[test]
+    fn default_verifier_accepts_mock_in_tests() {
+        let subject = Cid::from_canonical_bytes(b"root-mock");
+        let stmt = AttestationStatement::mock(subject, "dev");
+        let v = DefaultAttestationVerifier::default()
+            .verify(&stmt)
+            .unwrap();
         assert!(v.valid);
     }
 }

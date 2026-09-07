@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.91.0
+      - name: arxos-core
+        run: cargo test --locked -p arxos-core
+      - name: gateways
+        run: |
+          cargo test --locked -p arxos-ifc
+          cargo test --locked -p arxos-usd
+      - name: networking
+        run: cargo test --locked -p arxos-networking
+      - name: cli (includes net_fetch)
+        run: cargo test --locked -p arxos-cli
+      - name: ffi compile
+        run: cargo check --locked -p arxos-ffi
+      - name: workspace
+        run: cargo test --locked --workspace --exclude arxos-ffi

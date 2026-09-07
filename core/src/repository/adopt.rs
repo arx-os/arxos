@@ -39,22 +39,42 @@ impl BuildingRepository {
         // Always materialize first so we can resolve controllers from the root's active set.
         let active_set = root.materialize_active_objects(&self.store)?;
 
-        if !opts.allow_partial {
-            let missing = crate::root::missing_active_objects(&self.store, &active_set)?;
-            if !missing.is_empty() {
-                let preview: Vec<String> = missing.iter().take(8).map(|c| c.to_string()).collect();
-                return Err(Error::NotFound(format!(
-                    "incomplete root for adopt: missing {} active object(s), e.g. {}",
-                    missing.len(),
-                    preview.join(", ")
-                )));
+        if opts.allow_partial {
+            return Err(Error::Validation(
+                "refusing to adopt an incomplete root as head (allow_partial is not a production path; ingest with set_head=false)"
+                    .into(),
+            ));
+        }
+
+        if self.record.head_root.is_none() && !opts.expected_controllers.is_empty() {
+            let remote_keys =
+                crate::root::resolve_controller_keys(&self.store, &active_set, &root.building_id)?;
+            let mut expected = opts.expected_controllers.clone();
+            let mut got = remote_keys;
+            expected.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+            got.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+            if expected != got {
+                return Err(Error::Authorization(
+                    "first-contact controller pin does not match remote Building.controller_keys"
+                        .into(),
+                ));
             }
-            if let Some(si) = root.spatial_index_root {
-                if !self.store.contains(&si) {
-                    return Err(Error::NotFound(format!(
-                        "incomplete root for adopt: spatial_index_root {si} missing"
-                    )));
-                }
+        }
+
+        let missing = crate::root::missing_active_objects(&self.store, &active_set)?;
+        if !missing.is_empty() {
+            let preview: Vec<String> = missing.iter().take(8).map(|c| c.to_string()).collect();
+            return Err(Error::NotFound(format!(
+                "incomplete root for adopt: missing {} active object(s), e.g. {}",
+                missing.len(),
+                preview.join(", ")
+            )));
+        }
+        if let Some(si) = root.spatial_index_root {
+            if !self.store.contains(&si) {
+                return Err(Error::NotFound(format!(
+                    "incomplete root for adopt: spatial_index_root {si} missing"
+                )));
             }
         }
 
@@ -105,7 +125,7 @@ mod tests {
     use crate::crypto::Keypair;
     use crate::object::{BuildingBody, Object, ObjectBody};
     use crate::root::RootBuilder;
-    use crate::Error;
+    use crate::{AdoptOptions, Error};
     use std::collections::{BTreeMap, BTreeSet};
     use tempfile::tempdir;
 
@@ -236,6 +256,58 @@ mod tests {
             Some(crate::root::ContinuityOutcome::FirstTrust)
         );
         assert_eq!(repo_b.head_root(), Some(head));
+    }
+
+    #[test]
+    fn adopt_first_contact_pin_rejects_mallory() {
+        let dir_a = tempdir().unwrap();
+        let dir_m = tempdir().unwrap();
+        let dir_b = tempdir().unwrap();
+        let repo_a = BuildingRepository::init(dir_a.path(), Some("Alice".into()), None).unwrap();
+        let bid = repo_a.building_id().clone();
+        let alice_pk = repo_a.keypair().unwrap().public_key();
+        drop(repo_a);
+
+        let mallory = Keypair::generate();
+        let repo_m =
+            BuildingRepository::open_or_follow(dir_m.path(), &bid, Some("Mallory".into())).unwrap();
+        let b_m = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: Some("Mallory".into()),
+                controller_keys: vec![mallory.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let b_m_cid = repo_m.put_object(&b_m).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(b_m_cid);
+        let (fork, fork_cid) = RootBuilder::new(bid.clone(), 10)
+            .objects(objects)
+            .message("mallory")
+            .build_signed(&mallory)
+            .unwrap();
+        repo_m.put_object(&fork).unwrap();
+        let bytes = repo_m.get_object(&fork_cid).unwrap().to_canonical_bytes().unwrap();
+        let building_bytes = repo_m.get_object(&b_m_cid).unwrap().to_canonical_bytes().unwrap();
+        drop(repo_m);
+
+        let mut repo_b =
+            BuildingRepository::open_or_follow(dir_b.path(), &bid, Some("Follow".into())).unwrap();
+        repo_b.put_object_bytes(&building_bytes).unwrap();
+        repo_b.put_object_bytes(&bytes).unwrap();
+        let err = repo_b
+            .adopt_root_with_options(
+                fork_cid,
+                &AdoptOptions {
+                    expected_controllers: vec![alice_pk],
+                    ..Default::default()
+                },
+            )
+            .unwrap_err();
+        assert!(matches!(err, Error::Authorization(_)), "{err:?}");
+        assert!(repo_b.head_root().is_none());
     }
 
     #[test]

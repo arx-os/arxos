@@ -15,17 +15,11 @@ namespace arxos_core {
     string hello(string name);
     string version();
     string generate_building_id();
-    KeypairData generate_keypair();
-    string public_key_hex(KeypairData keypair);
 
     [Throws=ArxosError]
-    ObjectPutResult put_blob(string store_path, bytes data, string? content_type);
+    void set_device_seed(bytes seed);
 
-    [Throws=ArxosError]
-    RootCreateResult create_root(string store_path, string building_id, sequence<string> object_cids, string seed_hex, string? message);
-
-    [Throws=ArxosError]
-    string? show_root(string store_path, string root_cid);
+    void clear_device_seed();
 
     [Throws=ArxosError]
     FfiBuildingSummary init_building(string store_path, string? name);
@@ -61,29 +55,13 @@ namespace arxos_core {
     MergeSummary merge_building_root(string store_path, string building_id, string other_root_cid, string? message);
 
     [Throws=ArxosError]
-    PullResultSummary pull_remote_root(string store_path, string peer_ticket, string root_cid, string? building_id, boolean set_head, boolean allow_untrusted);
+    PullResultSummary pull_remote_root(string store_path, string peer_ticket, string root_cid, string? building_id, boolean set_head);
 
     [Throws=ArxosError]
     void export_usd(string store_path, string building_id, string output_path);
 
     [Throws=ArxosError]
     void export_ifc(string store_path, string building_id, string output_path);
-};
-
-dictionary KeypairData {
-    bytes seed;
-    string public_key_hex;
-};
-
-dictionary ObjectPutResult {
-    string cid;
-    string object_type;
-};
-
-dictionary RootCreateResult {
-    string root_cid;
-    string building_id;
-    u64 object_count;
 };
 
 dictionary FfiBuildingSummary {

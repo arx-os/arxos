@@ -1,7 +1,7 @@
 //! # arxos-core
 //!
 //! Content-addressed object model, Merkle roots, local CAS store, ed25519
-//! integrity signatures, and contributor scoring for the Arxos DePIN data plane.
+//! integrity signatures, and contributor scoring for the Arxos local-first store.
 //!
 //! Economic settlement is **fiat** (not tokens / chain mint). Scoring produces
 //! points for contribution attribution; the core never embeds money in CIDs.
@@ -81,8 +81,8 @@ pub use root::{
 };
 pub use spatial::{QueryVolume, SpatialEntry, SpatialHit};
 pub use store::{
-    atomic_write, is_tmp_name, unique_tmp_path, MemObjectStore, ObjectRead, ObjectStore,
-    ObjectWrite, WriteGuard, MAX_OBJECT_BYTES, STORE_LOCK_FILE,
+    atomic_write, gc_tmp_artifacts, is_tmp_name, unique_tmp_path, MemObjectStore, ObjectRead,
+    ObjectStore, ObjectWrite, WriteGuard, MAX_OBJECT_BYTES, STORE_LOCK_FILE,
 };
 pub use verify::{
     verify_object_canonicalization, verify_root_body_determinism, verify_root_transition, Finding,

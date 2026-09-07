@@ -31,7 +31,7 @@ rm -f "$OUT_DIR/module.modulemap" "$OUT_DIR/arxos_coreFFI.modulemap"
 # UniFFI still emits try! for a few infallible scaffolding buffer ops and pure
 # helpers (hello/version). Public store/capture/commit paths must use try + throws.
 # Fail the generator if any *throwing* public API regressed to try!.
-if grep -E 'public func (initBuilding|openBuilding|commitBuilding|capture|listBuildings|annotationsNear|ingestRoomPlan|mergeBuildingRoot|pullRemoteRoot|putBlob|createRoot|exportUsd|exportIfc|showRoot|querySpatialVolume)' \
+if grep -E 'public func (initBuilding|openBuilding|commitBuilding|capture|listBuildings|annotationsNear|ingestRoomPlan|mergeBuildingRoot|pullRemoteRoot|exportUsd|exportIfc|querySpatialVolume|setDeviceSeed)' \
   "$OUT_DIR/arxos_core.swift" | grep -q 'try!'; then
   echo "error: public throwing UniFFI APIs must not use try!" >&2
   exit 1

@@ -28,8 +28,9 @@ These rules are non-negotiable. New code that violates them will be rejected.
 - **Roots** (`RootBody::sign`): required authority in `body.authors`. `into_object` blanks `header.signature`. `Object::verify_signature` on a Root is defined to fail.
 - **`verify_with_store`**: self-consistency of a Root versus the Building in *that Root's* active set. Local `commit` uses this and nothing else.
 - **Adopt / production pull** (`allow_untrusted = false`, `set_head = true`): self-consistency **plus** replica continuity (`verify_continuous_with_local`). Remote authors must be controllers of *this replica's* current Building, and the remote Root must descend from `head_root` (`previous_root` / `merge_parents`). A full-set checkpoint with `previous_root = None` against an existing head is a second genesis and is rejected.
-- **First contact** (`open_or_follow` with `head_root == None`): TOFU after self-consistency.
-- **`allow_untrusted`**: IFC/USD unsigned import and explicit FFI/debug flags. Not the production fetch default. Ingest may store untrusted bytes; heads do not advance on them by default.
+- **First contact** (`open_or_follow` with `head_root == None`): TOFU after self-consistency, unless `AdoptOptions.expected_controllers` / `--trust-controllers` pins the remote Building keys.
+- **`allow_untrusted`**: explicit disaster-recovery hatch. Not import, not the production fetch default, not a warning — the head moves. Ingest may store untrusted bytes; heads do not advance on them by default.
+- **`allow_partial`**: cannot become head. Metadata-only ingest must leave `head_root` unchanged.
 
 ### Preferred types for new code
 

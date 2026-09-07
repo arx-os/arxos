@@ -2,6 +2,7 @@
 //!
 //! Service type: `_arxos._udp.local.`
 //! TXT keys: `peer`, `building`, `root`, `name`, `objects`
+//! (no dial ticket — Iroh tickets do not fit in DNS TXT).
 
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -54,30 +55,8 @@ impl MdnsDiscovery {
         ticket: Option<&str>,
         buildings: &[BuildingHeadAd],
     ) -> Result<()> {
-        let mut props = HashMap::new();
-        props.insert("peer".into(), peer_id.to_string());
-        if let Some(t) = ticket {
-            // TXT values should stay reasonably small; truncate huge tickets.
-            let truncated = if t.len() > 200 {
-                format!("{}…", &t[..200])
-            } else {
-                t.to_string()
-            };
-            props.insert("ticket".into(), truncated);
-        }
-        if let Some(b) = buildings.first() {
-            props.insert("building".into(), b.building_id.clone());
-            props.insert("root".into(), b.root_cid.clone());
-            if let Some(n) = &b.name {
-                props.insert("name".into(), n.clone());
-            }
-            props.insert("objects".into(), b.object_count.to_string());
-        }
-        // Encode additional buildings as building2/root2 …
-        for (i, b) in buildings.iter().skip(1).take(4).enumerate() {
-            props.insert(format!("building{}", i + 2), b.building_id.clone());
-            props.insert(format!("root{}", i + 2), b.root_cid.clone());
-        }
+        let _ = ticket; // Iroh tickets do not fit in DNS TXT; copy from serve stdout.
+        let props = txt_properties(peer_id, buildings);
 
         let host_name = format!("{instance}.local.");
         let service = mdns_sd::ServiceInfo::new(
@@ -152,6 +131,25 @@ impl MdnsDiscovery {
         let _ = self.daemon.shutdown();
         Ok(())
     }
+}
+
+/// TXT records for LAN discovery. Peer id + advertised heads only — not dial tickets.
+pub fn txt_properties(peer_id: &str, buildings: &[BuildingHeadAd]) -> HashMap<String, String> {
+    let mut props = HashMap::new();
+    props.insert("peer".into(), peer_id.to_string());
+    if let Some(b) = buildings.first() {
+        props.insert("building".into(), b.building_id.clone());
+        props.insert("root".into(), b.root_cid.clone());
+        if let Some(n) = &b.name {
+            props.insert("name".into(), n.clone());
+        }
+        props.insert("objects".into(), b.object_count.to_string());
+    }
+    for (i, b) in buildings.iter().skip(1).take(4).enumerate() {
+        props.insert(format!("building{}", i + 2), b.building_id.clone());
+        props.insert(format!("root{}", i + 2), b.root_cid.clone());
+    }
+    props
 }
 
 #[cfg(feature = "mdns")]
@@ -246,5 +244,25 @@ impl MdnsDiscovery {
 
     pub fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn txt_properties_omit_dial_ticket() {
+        let ads = vec![BuildingHeadAd {
+            building_id: "bid".into(),
+            root_cid: "b3:aa".into(),
+            name: Some("Hall".into()),
+            object_count: 3,
+        }];
+        let p = txt_properties("peer-1", &ads);
+        assert!(!p.contains_key("ticket"));
+        assert_eq!(p.get("peer").map(String::as_str), Some("peer-1"));
+        assert_eq!(p.get("building").map(String::as_str), Some("bid"));
+        assert_eq!(p.get("root").map(String::as_str), Some("b3:aa"));
     }
 }

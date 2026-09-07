@@ -199,7 +199,7 @@ fn concurrent_remove_only_drops_entity() {
                     base.root_cid,
                     &AdoptOptions {
                         allow_untrusted: true,
-                        allow_partial: false,
+                        ..Default::default()
                     },
                 )
                 .unwrap();

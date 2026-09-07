@@ -166,30 +166,8 @@ impl ObjectTransport for MemoryNode {
         _message: Option<String>,
     ) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
-            // Memory mesh: update the peer's advertised buildings in place.
-            let mut guard = self
-                .mesh
-                .inner
-                .lock()
-                .map_err(|e| NetError::Transport(e.to_string()))?;
-            let node = guard
-                .get_mut(peer)
-                .ok_or_else(|| NetError::PeerNotFound(peer.clone()))?;
-            if let Some(ad) = node
-                .buildings
-                .iter_mut()
-                .find(|b| b.building_id == building_id)
-            {
-                ad.root_cid = root_cid.to_string();
-                ad.object_count = object_count;
-            } else {
-                node.buildings.push(BuildingHeadAd {
-                    building_id: building_id.to_string(),
-                    root_cid: root_cid.to_string(),
-                    name: None,
-                    object_count,
-                });
-            }
+            let _ = (peer, building_id, root_cid, object_count);
+            // Advertisements are local-store only (same as Iroh serve).
             Ok(())
         })
     }

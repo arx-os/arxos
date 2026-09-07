@@ -3,7 +3,7 @@
 use crate::cid::Cid;
 use crate::error::{Error, Result};
 use crate::object::{Aabb, Object, ObjectBody};
-use crate::store::{ObjectRead, ObjectWrite};
+use crate::store::ObjectWrite;
 
 use super::super::aabb::union_all;
 use super::build::build_index;

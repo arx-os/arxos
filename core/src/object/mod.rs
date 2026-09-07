@@ -747,7 +747,17 @@ impl Object {
     }
 
     /// Sign this object in place. Sets author + signature; CID changes after signing.
+    ///
+    /// Roots use [`crate::root::RootBody::sign`] / `into_object`. Signing a Root
+    /// as a leaf is defined to fail.
     pub fn sign(&mut self, keypair: &Keypair) -> Result<()> {
+        if self.header.object_type == ObjectType::Root
+            || matches!(self.body, ObjectBody::Root(_))
+        {
+            return Err(Error::Signature(
+                "Roots use RootBody::sign / into_object, not Object::sign".into(),
+            ));
+        }
         self.body.canonicalize_geometry()?;
         self.header.author = Some(keypair.public_key());
         self.header.signature = None;
@@ -757,7 +767,17 @@ impl Object {
     }
 
     /// Verify object signature if present.
+    ///
+    /// Defined to fail for Root objects (authority is `RootBody.authors`).
     pub fn verify_signature(&self) -> Result<()> {
+        if self.header.object_type == ObjectType::Root
+            || matches!(self.body, ObjectBody::Root(_))
+        {
+            return Err(Error::Signature(
+                "Object::verify_signature on a Root is defined to fail; use RootBody::verify_authors"
+                    .into(),
+            ));
+        }
         let Some(sig) = &self.header.signature else {
             return Err(Error::Signature("object has no signature".into()));
         };
@@ -782,10 +802,11 @@ impl Object {
                 self.body.object_type()
             )));
         }
-        if self.header.schema_version == 0 {
-            return Err(Error::Validation(
-                "schema_version must be >= 1".into(),
-            ));
+        if self.header.schema_version != SCHEMA_VERSION {
+            return Err(Error::Validation(format!(
+                "schema_version {} is not supported (expected {SCHEMA_VERSION})",
+                self.header.schema_version
+            )));
         }
         if let Some(sig) = &self.header.signature {
             if self.header.author.is_none() {
@@ -811,6 +832,7 @@ impl Object {
 mod tests {
     use super::*;
     use crate::crypto::Keypair;
+    use std::collections::BTreeSet;
 
     #[test]
     fn object_cid_stable() {
@@ -952,6 +974,32 @@ mod tests {
     }
 
     #[test]
+    fn unknown_schema_version_rejected() {
+        let obj = Object {
+            header: ObjectHeader {
+                object_type: ObjectType::Annotation,
+                schema_version: 99,
+                created: 1,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("v99".into()),
+                transcript: None,
+                media_ref: None,
+                pose: None,
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        let err = obj.validate().unwrap_err();
+        assert!(
+            matches!(err, Error::Validation(ref m) if m.contains("schema_version")),
+            "{err:?}"
+        );
+    }
+
+    #[test]
     fn inf_aabb_rejected() {
         let obj = Object {
             header: ObjectHeader {
@@ -1007,5 +1055,18 @@ mod tests {
         } else {
             panic!("expected annotation");
         }
+    }
+
+    #[test]
+    fn object_sign_and_verify_fail_on_root() {
+        let kp = Keypair::generate();
+        let body = RootBody::new(BuildingId::new(), None, BTreeSet::new(), 1);
+        let mut obj = Object::new(ObjectBody::Root(body));
+        assert!(obj.sign(&kp).is_err());
+        let (signed, _) = crate::root::RootBuilder::new(BuildingId::new(), 1)
+            .objects(BTreeSet::new())
+            .build_signed(&kp)
+            .unwrap();
+        assert!(signed.verify_signature().is_err());
     }
 }

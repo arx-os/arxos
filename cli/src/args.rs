@@ -131,7 +131,7 @@ pub enum ExportCommands {
         #[arg(long)]
         no_points: bool,
     },
-    /// Export building head as IFC4 STEP
+    /// Export building head as IFC4 STEP (identity + labels; not a certified CoordinationView)
     Ifc {
         building_id: String,
         #[arg(long, short)]
@@ -147,13 +147,14 @@ pub enum ImportCommands {
     Usd {
         /// Path to .usda file
         file: PathBuf,
-        /// Sign imported objects with device seed if present
+        /// Sign imported objects with keys/device.seed (required)
         #[arg(long, default_value_t = true)]
         sign: bool,
     },
     /// Import IFC STEP into a local store
     Ifc {
         file: PathBuf,
+        /// Sign imported objects with keys/device.seed (required)
         #[arg(long, default_value_t = true)]
         sign: bool,
     },
@@ -258,12 +259,15 @@ pub enum NetCommands {
             help = "Ingest without adopting as local head (then merge apply with printed root_cid)"
         )]
         set_head: bool,
-        /// Allow adopting untrusted roots (verification failure becomes warning)
+        /// Skip Root-law and replica continuity; will set head unless --no-set-head
         #[arg(long, default_value_t = false)]
         allow_untrusted: bool,
-        /// Pull domain objects without Blob payloads (metadata-first)
+        /// Pull domain objects without Blob payloads (metadata-first; requires --no-set-head)
         #[arg(long, default_value_t = false)]
         metadata_only: bool,
+        /// Exact Building.controller_keys (hex, repeatable) required on first-contact TOFU
+        #[arg(long = "trust-controllers", value_name = "HEX")]
+        trust_controllers: Vec<String>,
     },
     /// Refresh advertisements / print current building heads for publish
     Publish {
@@ -589,5 +593,20 @@ mod tests {
     #[test]
     fn fetch_no_set_head_sets_false() {
         assert!(!parse_fetch(&["--no-set-head"]));
+    }
+
+    #[test]
+    fn fetch_allow_untrusted_help_says_sets_head() {
+        use clap::CommandFactory;
+        let mut cmd = Cli::command();
+        let mut buf = Vec::new();
+        let fetch = cmd.find_subcommand_mut("net").unwrap().find_subcommand_mut("fetch").unwrap();
+        fetch.write_long_help(&mut buf).unwrap();
+        let help = String::from_utf8(buf).unwrap();
+        assert!(
+            help.contains("will set head") || help.contains("Skip Root-law"),
+            "allow-untrusted help must not claim a warning, got:\n{help}"
+        );
+        assert!(!help.to_lowercase().contains("becomes warning"));
     }
 }

@@ -4,6 +4,7 @@
 // No parallel CAS, no pseudo-CIDs, no fallback implementations.
 
 import Foundation
+import Security
 
 // MARK: - Public models
 
@@ -183,15 +184,48 @@ public enum ArxosCore {
     }
 
     public static func defaultStorePath() -> String {
-        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let path = base.appendingPathComponent("arxos-store", isDirectory: true).path
-        try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
-        return path
+        let url = base.appendingPathComponent("arxos-store", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        protectStore(at: url)
+        return url.path
+    }
+
+    /// CAS lives in Application Support (not shared Documents). Exclude from
+    /// iCloud/unencrypted backup; complete data protection when the device locks.
+    static func protectStore(at url: URL) {
+        var mutable = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? mutable.setResourceValues(values)
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: url.path
+        )
+        let keys = url.appendingPathComponent("keys", isDirectory: true)
+        if FileManager.default.fileExists(atPath: keys.path) {
+            var keyUrl = keys
+            var keyValues = URLResourceValues()
+            keyValues.isExcludedFromBackup = true
+            try? keyUrl.setResourceValues(keyValues)
+            try? FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.complete],
+                ofItemAtPath: keys.path
+            )
+        }
+    }
+
+    static func ensureDeviceSeed(storePath: String) throws {
+        let seed = try DeviceSeed.loadOrCreate(migratingFrom: storePath)
+        try uniffiSetDeviceSeed(seed: seed)
     }
 
     public static func initBuilding(storePath: String, name: String?) throws -> BuildingSummary {
+        try ensureDeviceSeed(storePath: storePath)
         let s = try uniffiInitBuilding(storePath: storePath, name: name)
+        protectStore(at: URL(fileURLWithPath: storePath, isDirectory: true))
+        DeviceSeed.deleteDiskSeed(storePath: storePath)
         return BuildingSummary(
             buildingId: s.buildingId,
             name: s.name,
@@ -202,6 +236,7 @@ public enum ArxosCore {
     }
 
     public static func openBuilding(storePath: String, buildingId: String) throws -> BuildingSummary {
+        try ensureDeviceSeed(storePath: storePath)
         let s = try uniffiOpenBuilding(storePath: storePath, buildingId: buildingId)
         return BuildingSummary(
             buildingId: s.buildingId,
@@ -231,6 +266,7 @@ public enum ArxosCore {
         x: Double, y: Double, z: Double,
         entityId: String? = nil
     ) throws -> CapturePutResult {
+        try ensureDeviceSeed(storePath: storePath)
         let r = try uniffiCaptureSpace(
             storePath: storePath, buildingId: buildingId, name: name, x: x, y: y, z: z,
             entityId: entityId
@@ -244,6 +280,7 @@ public enum ArxosCore {
         text: String,
         x: Double, y: Double, z: Double
     ) throws -> CapturePutResult {
+        try ensureDeviceSeed(storePath: storePath)
         let r = try uniffiCaptureAnnotation(
             storePath: storePath, buildingId: buildingId, text: text, x: x, y: y, z: z
         )
@@ -256,6 +293,7 @@ public enum ArxosCore {
         pointsXYZF32LE: Data,
         x: Double, y: Double, z: Double
     ) throws -> CapturePutResult {
+        try ensureDeviceSeed(storePath: storePath)
         let r = try uniffiCapturePointCloud(
             storePath: storePath,
             buildingId: buildingId,
@@ -270,6 +308,7 @@ public enum ArxosCore {
         buildingId: String,
         message: String?
     ) throws -> CommitSummary {
+        try ensureDeviceSeed(storePath: storePath)
         let r = try uniffiCommitBuilding(
             storePath: storePath, buildingId: buildingId, message: message
         )
@@ -304,6 +343,7 @@ public enum ArxosCore {
         surfaces: [RoomPlanSurface],
         objects: [RoomPlanObject]
     ) throws -> IngestSummary {
+        try ensureDeviceSeed(storePath: storePath)
         let geom = RoomPlanGeometry(
             surfaces: surfaces.map {
                 FfiRoomPlanSurface(
@@ -361,6 +401,7 @@ public enum ArxosCore {
         otherRootCid: String,
         message: String?
     ) throws -> MergeResultSummary {
+        try ensureDeviceSeed(storePath: storePath)
         let r = try uniffiMergeBuildingRoot(
             storePath: storePath, buildingId: buildingId,
             otherRootCid: otherRootCid, message: message
@@ -381,13 +422,12 @@ public enum ArxosCore {
         peerTicket: String,
         rootCid: String,
         buildingId: String?,
-        setHead: Bool,
-        allowUntrusted: Bool
+        setHead: Bool
     ) throws -> PullSummary {
         let r = try uniffiPullRemoteRoot(
             storePath: storePath, peerTicket: peerTicket,
             rootCid: rootCid, buildingId: buildingId,
-            setHead: setHead, allowUntrusted: allowUntrusted
+            setHead: setHead
         )
         return PullSummary(
             rootCid: r.rootCid,
@@ -415,5 +455,80 @@ public enum ArxosCore {
         try uniffiExportIfc(
             storePath: storePath, buildingId: buildingId, outputPath: outputPath
         )
+    }
+}
+
+/// Controller seed in the Keychain. Never stored in the CAS folder.
+enum DeviceSeed {
+    private static let service = "ai.arxos.device-seed"
+    private static let account = "controller"
+
+    static func loadOrCreate(migratingFrom storePath: String) throws -> Data {
+        if let existing = try load() {
+            deleteDiskSeed(storePath: storePath)
+            return existing
+        }
+        let disk = URL(fileURLWithPath: storePath, isDirectory: true)
+            .appendingPathComponent("keys", isDirectory: true)
+            .appendingPathComponent("device.seed")
+        if let fromDisk = try? Data(contentsOf: disk), fromDisk.count == 32 {
+            try save(fromDisk)
+            deleteDiskSeed(storePath: storePath)
+            return fromDisk
+        }
+        var bytes = [UInt8](repeating: 0, count: 32)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            throw NSError(
+                domain: NSOSStatusErrorDomain,
+                code: Int(status),
+                userInfo: [NSLocalizedDescriptionKey: "failed to generate device seed"]
+            )
+        }
+        let data = Data(bytes)
+        try save(data)
+        return data
+    }
+
+    static func load() throws -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecItemNotFound {
+            return nil
+        }
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+        return data
+    }
+
+    static func save(_ data: Data) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(query as CFDictionary)
+        var attrs = query
+        attrs[kSecValueData as String] = data
+        attrs[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        let status = SecItemAdd(attrs as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+    }
+
+    static func deleteDiskSeed(storePath: String) {
+        let seed = URL(fileURLWithPath: storePath, isDirectory: true)
+            .appendingPathComponent("keys", isDirectory: true)
+            .appendingPathComponent("device.seed")
+        try? FileManager.default.removeItem(at: seed)
     }
 }

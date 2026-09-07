@@ -41,7 +41,7 @@ impl Writer {
         let mut out = String::new();
         out.push_str("ISO-10303-21;\n");
         out.push_str("HEADER;\n");
-        out.push_str("FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');\n");
+        out.push_str("FILE_DESCRIPTION(('ViewDefinition [ArxosAsBuiltView]'),'2;1');\n");
         out.push_str(&format!(
             "FILE_NAME('arxos_export.ifc','{}',('Arxos'),('Arxos'),'arxos-ifc {}','arxos-ifc','');\n",
             iso_timestamp(),

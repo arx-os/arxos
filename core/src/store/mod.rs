@@ -5,9 +5,11 @@ mod traits;
 pub use memory::MemObjectStore;
 pub use traits::{ObjectRead, ObjectWrite};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs::{self, File, OpenOptions};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use fs2::FileExt;
 use rand::Rng;
@@ -40,20 +42,79 @@ pub fn is_tmp_name(name: &str) -> bool {
 }
 
 /// Write `bytes` to `path` via a unique temp file + rename.
+///
+/// Durability: `sync_all` the temp file before rename, then `sync_all` the
+/// parent directory (Unix) so the directory entry survives power loss.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
     let tmp = unique_tmp_path(path);
-    fs::write(&tmp, bytes).map_err(|e| {
+    let write_tmp = (|| -> Result<()> {
+        let mut file = File::create(&tmp)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        Ok(())
+    })();
+    if let Err(e) = write_tmp {
         let _ = fs::remove_file(&tmp);
-        e
-    })?;
+        return Err(e);
+    }
     if let Err(e) = fs::rename(&tmp, path) {
+        if e.kind() == io::ErrorKind::AlreadyExists {
+            if let Ok(existing) = fs::read(path) {
+                if existing.as_slice() == bytes {
+                    let _ = fs::remove_file(&tmp);
+                    return Ok(());
+                }
+            }
+        }
         let _ = fs::remove_file(&tmp);
         return Err(e.into());
     }
+    sync_parent_dir(path)?;
     Ok(())
+}
+
+fn sync_parent_dir(path: &Path) -> Result<()> {
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    #[cfg(unix)]
+    {
+        let dir = File::open(parent)?;
+        dir.sync_all()?;
+    }
+    let _ = parent;
+    Ok(())
+}
+
+/// Delete leftover `*.tmp*` object files under `objects/`. Best-effort.
+pub fn gc_tmp_artifacts(root: &Path) -> u64 {
+    let objects = root.join("objects");
+    let Ok(dirs) = fs::read_dir(&objects) else {
+        return 0;
+    };
+    let mut n = 0u64;
+    for dir_ent in dirs.flatten() {
+        let Ok(ft) = dir_ent.file_type() else {
+            continue;
+        };
+        if !ft.is_dir() {
+            continue;
+        }
+        let Ok(files) = fs::read_dir(dir_ent.path()) else {
+            continue;
+        };
+        for file_ent in files.flatten() {
+            let name = file_ent.file_name();
+            let name = name.to_string_lossy();
+            if is_tmp_name(&name) && fs::remove_file(file_ent.path()).is_ok() {
+                n += 1;
+            }
+        }
+    }
+    n
 }
 
 /// Hard cap on a single object's canonical CBOR size (4 MiB).
@@ -76,10 +137,48 @@ pub struct IndexEntry {
 /// RAII exclusive write lock on a store (`store.lock` via flock).
 ///
 /// Dropping the guard releases the lock. Concurrent writers on the same path
-/// fail with a clear store error.
+/// fail with a clear store error — including two handles in one process
+/// (flock alone is per-process on Unix).
 #[derive(Debug)]
 pub struct WriteGuard {
     _file: File,
+    process_key: Option<PathBuf>,
+}
+
+fn process_lock_table() -> &'static Mutex<HashSet<PathBuf>> {
+    static TABLE: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+    TABLE.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn process_lock_key(root: &Path) -> PathBuf {
+    fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf())
+}
+
+fn try_claim_process_lock(key: &Path) -> Result<()> {
+    let mut table = process_lock_table()
+        .lock()
+        .map_err(|e| Error::Store(format!("process lock table: {e}")))?;
+    if !table.insert(key.to_path_buf()) {
+        return Err(Error::Store(format!(
+            "store is locked in this process ({})",
+            key.display()
+        )));
+    }
+    Ok(())
+}
+
+fn release_process_lock(key: &Path) {
+    if let Ok(mut table) = process_lock_table().lock() {
+        table.remove(key);
+    }
+}
+
+impl Drop for WriteGuard {
+    fn drop(&mut self) {
+        if let Some(key) = self.process_key.take() {
+            release_process_lock(&key);
+        }
+    }
 }
 
 /// Local CAS: objects stored as files named by CID under a fan-out directory.
@@ -111,6 +210,7 @@ impl ObjectStore {
     pub fn open(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref().to_path_buf();
         fs::create_dir_all(root.join("objects"))?;
+        let _ = gc_tmp_artifacts(&root);
         Ok(Self { root })
     }
 
@@ -118,34 +218,61 @@ impl ObjectStore {
     ///
     /// Returns an error immediately if another process holds the lock.
     pub fn try_lock_exclusive(&self) -> Result<WriteGuard> {
+        let process_key = process_lock_key(&self.root);
+        try_claim_process_lock(&process_key)?;
         let path = self.root.join(STORE_LOCK_FILE);
-        let file = OpenOptions::new()
+        let file = match OpenOptions::new()
             .create(true)
             .read(true)
             .write(true)
+            .truncate(false)
             .open(&path)
-            .map_err(|e| Error::Store(format!("open store lock: {e}")))?;
-        file.try_lock_exclusive().map_err(|e| {
-            Error::Store(format!(
+        {
+            Ok(f) => f,
+            Err(e) => {
+                release_process_lock(&process_key);
+                return Err(Error::Store(format!("open store lock: {e}")));
+            }
+        };
+        if let Err(e) = file.try_lock_exclusive() {
+            release_process_lock(&process_key);
+            return Err(Error::Store(format!(
                 "store is locked by another process ({}): {e}",
                 path.display()
-            ))
-        })?;
-        Ok(WriteGuard { _file: file })
+            )));
+        }
+        Ok(WriteGuard {
+            _file: file,
+            process_key: Some(process_key),
+        })
     }
 
     /// Acquire an exclusive advisory lock, blocking until available.
     pub fn lock_exclusive(&self) -> Result<WriteGuard> {
+        let process_key = process_lock_key(&self.root);
+        try_claim_process_lock(&process_key)?;
         let path = self.root.join(STORE_LOCK_FILE);
-        let file = OpenOptions::new()
+        let file = match OpenOptions::new()
             .create(true)
             .read(true)
             .write(true)
+            .truncate(false)
             .open(&path)
-            .map_err(|e| Error::Store(format!("open store lock: {e}")))?;
-        file.lock_exclusive()
-            .map_err(|e| Error::Store(format!("store lock: {e}")))?;
-        Ok(WriteGuard { _file: file })
+        {
+            Ok(f) => f,
+            Err(e) => {
+                release_process_lock(&process_key);
+                return Err(Error::Store(format!("open store lock: {e}")));
+            }
+        };
+        if let Err(e) = file.lock_exclusive() {
+            release_process_lock(&process_key);
+            return Err(Error::Store(format!("store lock: {e}")));
+        }
+        Ok(WriteGuard {
+            _file: file,
+            process_key: Some(process_key),
+        })
     }
 
     pub fn root(&self) -> &Path {
@@ -161,8 +288,9 @@ impl ObjectStore {
 
     /// Put an object; returns its CID. Idempotent if content already present.
     ///
-    /// Crash-safe on the same filesystem (temp file + rename). Does not update
-    /// the optional thin index — use [`rebuild_index`] when needed.
+    /// Crash-safe on the same filesystem (temp file + fsync + rename + dir
+    /// fsync). Does not update the optional thin index — use [`rebuild_index`]
+    /// when needed.
     pub fn put(&self, object: &Object) -> Result<Cid> {
         object.validate()?;
         let bytes = object.to_canonical_bytes()?;
@@ -207,7 +335,15 @@ impl ObjectStore {
         let cid = Cid::from_canonical_bytes(bytes);
         let path = self.object_path(&cid);
         if path.exists() {
-            return Ok(cid);
+            match fs::read(&path) {
+                Ok(existing) if existing.as_slice() == bytes => return Ok(cid),
+                Ok(_) => {
+                    // Corrupt slot at this CID path: replace with canonical bytes.
+                    atomic_write(&path, bytes)?;
+                    return Ok(cid);
+                }
+                Err(_) => {}
+            }
         }
         // Unique temp + rename: two writers of the same CID cannot tear a
         // shared `.tmp` file even if they skipped the exclusive store lock.
@@ -508,6 +644,49 @@ mod tests {
     }
 
     #[test]
+    fn open_gcs_tmp_artifacts() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data: vec![7],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let cid = store.put(&obj).unwrap();
+        let leftover = unique_tmp_path(&store.object_path(&cid));
+        fs::write(&leftover, b"partial").unwrap();
+        assert!(leftover.exists());
+        drop(store);
+        let _ = ObjectStore::open(dir.path()).unwrap();
+        assert!(!leftover.exists(), "open must GC leftover temps");
+    }
+
+    #[test]
+    fn put_replaces_corrupt_existing_slot() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let obj = Object::new_with_created(
+            ObjectBody::Blob(BlobBody {
+                content_type: None,
+                data: b"real".to_vec(),
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bytes = obj.to_canonical_bytes().unwrap();
+        let cid = Cid::from_canonical_bytes(&bytes);
+        let path = store.object_path(&cid);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, b"garbage-not-canonical").unwrap();
+        let got = store.put(&obj).unwrap();
+        assert_eq!(got, cid);
+        assert_eq!(store.get_bytes(&cid).unwrap(), bytes);
+    }
+
+    #[test]
     fn exclusive_lock_blocks_other_process() {
         // Child probe: parent holds the lock; this process must fail to acquire it.
         if std::env::var_os("ARXOS_LOCK_CHILD").is_some() {
@@ -533,6 +712,36 @@ mod tests {
             status.success(),
             "second process should fail try_lock_exclusive while parent holds WriteGuard; {status}"
         );
+    }
+
+    #[test]
+    fn exclusive_lock_blocks_second_handle_in_same_process() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let g1 = store.try_lock_exclusive().unwrap();
+        let err = store.try_lock_exclusive().unwrap_err();
+        assert!(
+            err.to_string().contains("this process"),
+            "expected in-process lock reject, got {err}"
+        );
+        drop(g1);
+        assert!(store.try_lock_exclusive().is_ok());
+    }
+
+    #[test]
+    fn exclusive_lock_blocks_other_thread() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let g1 = store.try_lock_exclusive().unwrap();
+        let path = dir.path().to_path_buf();
+        let blocked = std::thread::spawn(move || {
+            let store = ObjectStore::open(&path).unwrap();
+            store.try_lock_exclusive().is_err()
+        })
+        .join()
+        .expect("thread");
+        assert!(blocked, "second thread must not acquire exclusive lock");
+        drop(g1);
     }
 
     #[test]

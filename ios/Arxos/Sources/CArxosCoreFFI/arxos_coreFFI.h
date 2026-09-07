@@ -268,17 +268,18 @@ RustBuffer uniffi_arxos_core_fn_func_capture_point_cloud(RustBuffer store_path, 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CAPTURE_SPACE
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CAPTURE_SPACE
-RustBuffer uniffi_arxos_core_fn_func_capture_space(RustBuffer store_path, RustBuffer building_id, RustBuffer name, double x, double y, double z, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_arxos_core_fn_func_capture_space(RustBuffer store_path, RustBuffer building_id, RustBuffer name, double x, double y, double z, RustBuffer entity_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CLEAR_DEVICE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CLEAR_DEVICE_SEED
+void uniffi_arxos_core_fn_func_clear_device_seed(RustCallStatus *_Nonnull out_status
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_COMMIT_BUILDING
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_COMMIT_BUILDING
 RustBuffer uniffi_arxos_core_fn_func_commit_building(RustBuffer store_path, RustBuffer building_id, RustBuffer message, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CREATE_ROOT
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_CREATE_ROOT
-RustBuffer uniffi_arxos_core_fn_func_create_root(RustBuffer store_path, RustBuffer building_id, RustBuffer object_cids, RustBuffer seed_hex, RustBuffer message, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_EXPORT_IFC
@@ -294,12 +295,6 @@ void uniffi_arxos_core_fn_func_export_usd(RustBuffer store_path, RustBuffer buil
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_GENERATE_BUILDING_ID
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_GENERATE_BUILDING_ID
 RustBuffer uniffi_arxos_core_fn_func_generate_building_id(RustCallStatus *_Nonnull out_status
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_GENERATE_KEYPAIR
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_GENERATE_KEYPAIR
-RustBuffer uniffi_arxos_core_fn_func_generate_keypair(RustCallStatus *_Nonnull out_status
     
 );
 #endif
@@ -333,19 +328,9 @@ RustBuffer uniffi_arxos_core_fn_func_merge_building_root(RustBuffer store_path, 
 RustBuffer uniffi_arxos_core_fn_func_open_building(RustBuffer store_path, RustBuffer building_id, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PUBLIC_KEY_HEX
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PUBLIC_KEY_HEX
-RustBuffer uniffi_arxos_core_fn_func_public_key_hex(RustBuffer keypair, RustCallStatus *_Nonnull out_status
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PULL_REMOTE_ROOT
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PULL_REMOTE_ROOT
-RustBuffer uniffi_arxos_core_fn_func_pull_remote_root(RustBuffer store_path, RustBuffer peer_ticket, RustBuffer root_cid, RustBuffer building_id, int8_t set_head, int8_t allow_untrusted, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PUT_BLOB
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_PUT_BLOB
-RustBuffer uniffi_arxos_core_fn_func_put_blob(RustBuffer store_path, RustBuffer data, RustBuffer content_type, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_arxos_core_fn_func_pull_remote_root(RustBuffer store_path, RustBuffer peer_ticket, RustBuffer root_cid, RustBuffer building_id, int8_t set_head, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_QUERY_SPATIAL_VOLUME
@@ -353,9 +338,9 @@ RustBuffer uniffi_arxos_core_fn_func_put_blob(RustBuffer store_path, RustBuffer 
 RustBuffer uniffi_arxos_core_fn_func_query_spatial_volume(RustBuffer store_path, RustBuffer building_id, double min_x, double min_y, double min_z, double max_x, double max_y, double max_z, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_SHOW_ROOT
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_SHOW_ROOT
-RustBuffer uniffi_arxos_core_fn_func_show_root(RustBuffer store_path, RustBuffer root_cid, RustCallStatus *_Nonnull out_status
+#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_SET_DEVICE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_SET_DEVICE_SEED
+void uniffi_arxos_core_fn_func_set_device_seed(RustBuffer seed, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_FN_FUNC_VERSION
@@ -668,15 +653,15 @@ uint16_t uniffi_arxos_core_checksum_func_capture_space(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_COMMIT_BUILDING
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_COMMIT_BUILDING
-uint16_t uniffi_arxos_core_checksum_func_commit_building(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_CLEAR_DEVICE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_CLEAR_DEVICE_SEED
+uint16_t uniffi_arxos_core_checksum_func_clear_device_seed(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_CREATE_ROOT
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_CREATE_ROOT
-uint16_t uniffi_arxos_core_checksum_func_create_root(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_COMMIT_BUILDING
+#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_COMMIT_BUILDING
+uint16_t uniffi_arxos_core_checksum_func_commit_building(void
     
 );
 #endif
@@ -695,12 +680,6 @@ uint16_t uniffi_arxos_core_checksum_func_export_usd(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_GENERATE_BUILDING_ID
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_GENERATE_BUILDING_ID
 uint16_t uniffi_arxos_core_checksum_func_generate_building_id(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_GENERATE_KEYPAIR
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_GENERATE_KEYPAIR
-uint16_t uniffi_arxos_core_checksum_func_generate_keypair(void
     
 );
 #endif
@@ -740,21 +719,9 @@ uint16_t uniffi_arxos_core_checksum_func_open_building(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PUBLIC_KEY_HEX
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PUBLIC_KEY_HEX
-uint16_t uniffi_arxos_core_checksum_func_public_key_hex(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PULL_REMOTE_ROOT
 #define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PULL_REMOTE_ROOT
 uint16_t uniffi_arxos_core_checksum_func_pull_remote_root(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PUT_BLOB
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_PUT_BLOB
-uint16_t uniffi_arxos_core_checksum_func_put_blob(void
     
 );
 #endif
@@ -764,9 +731,9 @@ uint16_t uniffi_arxos_core_checksum_func_query_spatial_volume(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_SHOW_ROOT
-#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_SHOW_ROOT
-uint16_t uniffi_arxos_core_checksum_func_show_root(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_SET_DEVICE_SEED
+#define UNIFFI_FFIDEF_UNIFFI_ARXOS_CORE_CHECKSUM_FUNC_SET_DEVICE_SEED
+uint16_t uniffi_arxos_core_checksum_func_set_device_seed(void
     
 );
 #endif

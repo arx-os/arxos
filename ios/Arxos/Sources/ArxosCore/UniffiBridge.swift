@@ -9,6 +9,10 @@ func uniffiHello(name: String) -> String { hello(name: name) }
 
 func uniffiGenerateBuildingId() -> String { generateBuildingId() }
 
+func uniffiSetDeviceSeed(seed: Data) throws {
+    try setDeviceSeed(seed: seed)
+}
+
 func uniffiInitBuilding(storePath: String, name: String?) throws -> FfiBuildingSummary {
     try initBuilding(storePath: storePath, name: name)
 }
@@ -96,11 +100,11 @@ func uniffiMergeBuildingRoot(
 
 func uniffiPullRemoteRoot(
     storePath: String, peerTicket: String, rootCid: String,
-    buildingId: String?, setHead: Bool, allowUntrusted: Bool
+    buildingId: String?, setHead: Bool
 ) throws -> PullResultSummary {
     try pullRemoteRoot(
         storePath: storePath, peerTicket: peerTicket, rootCid: rootCid,
-        buildingId: buildingId, setHead: setHead, allowUntrusted: allowUntrusted
+        buildingId: buildingId, setHead: setHead
     )
 }
 

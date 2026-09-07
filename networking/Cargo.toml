@@ -28,6 +28,8 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 zeroize = { workspace = true }
+# Hold 1.12: tinyvec 1.13.0 does not compile on rustc 1.96 (vec! vs alloc::vec).
+tinyvec = "=1.12.0"
 
 [dev-dependencies]
 tempfile = { workspace = true }

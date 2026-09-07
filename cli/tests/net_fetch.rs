@@ -85,7 +85,9 @@ fn net_fetch_help_includes_no_set_head() {
         .args(["net", "fetch", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("--no-set-head"));
+        .stdout(predicate::str::contains("--no-set-head"))
+        .stdout(predicate::str::contains("will set head"))
+        .stdout(predicate::str::contains("--trust-controllers"));
 }
 
 #[test]

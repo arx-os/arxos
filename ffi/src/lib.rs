@@ -6,7 +6,10 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::str::FromStr;
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use zeroize::Zeroizing;
 
 use arxos_core::capture::{maybe_sign, AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::cid::Cid;
@@ -72,6 +75,54 @@ impl From<arxos_networking::NetError> for ArxosError {
 }
 
 uniffi::include_scaffolding!("arxos");
+
+static FFI_DEVICE_SEED: Mutex<Option<Zeroizing<[u8; 32]>>> = Mutex::new(None);
+
+fn ffi_keypair() -> Option<Keypair> {
+    let guard = FFI_DEVICE_SEED.lock().ok()?;
+    guard.as_ref().map(|s| Keypair::from_seed(**s))
+}
+
+fn apply_ffi_seed(repo: &mut BuildingRepository) {
+    if let Some(kp) = ffi_keypair() {
+        repo.set_keypair(kp);
+    }
+}
+
+fn open_write(
+    store_path: &str,
+    building_id: &BuildingId,
+) -> Result<BuildingRepository, ArxosError> {
+    let mut repo = BuildingRepository::open(store_path, building_id)?;
+    apply_ffi_seed(&mut repo);
+    Ok(repo)
+}
+
+/// Install a 32-byte device seed for this process (Keychain / in-memory).
+///
+/// Subsequent init/open/commit use this key and do not write `keys/device.seed`
+/// on init.
+pub fn set_device_seed(seed: Vec<u8>) -> Result<(), ArxosError> {
+    if seed.len() != 32 {
+        return Err(ArxosError::InvalidInput {
+            message: format!("device seed must be 32 bytes, got {}", seed.len()),
+        });
+    }
+    let mut arr = Zeroizing::new([0u8; 32]);
+    arr.copy_from_slice(&seed);
+    let mut guard = FFI_DEVICE_SEED.lock().map_err(|e| ArxosError::Internal {
+        message: format!("device seed lock: {e}"),
+    })?;
+    *guard = Some(arr);
+    Ok(())
+}
+
+/// Drop the process-level device seed.
+pub fn clear_device_seed() {
+    if let Ok(mut guard) = FFI_DEVICE_SEED.lock() {
+        *guard = None;
+    }
+}
 
 /// Return static hello message.
 pub fn hello(name: String) -> String {
@@ -139,23 +190,35 @@ pub struct ObjectPutResult {
 /// stage objects or update a building head. Prefer [`BuildingRepository`]
 /// capture + commit for building data. Takes the exclusive store lock so it
 /// cannot race a repository writer.
+///
+/// Not available on iOS (production capture/commit only).
 pub fn put_blob(
     store_path: String,
     data: Vec<u8>,
     content_type: Option<String>,
 ) -> Result<ObjectPutResult, ArxosError> {
-    let store = ObjectStore::open(&store_path)?;
-    let _write_lock = store.try_lock_exclusive()?;
-    let obj = Object::new(ObjectBody::Blob(BlobBody {
-        content_type,
-        data,
-        properties: BTreeMap::new(),
-    }));
-    let cid = store.put(&obj)?;
-    Ok(ObjectPutResult {
-        cid: cid.to_string(),
-        object_type: "blob".into(),
-    })
+    #[cfg(target_os = "ios")]
+    {
+        let _ = (store_path, data, content_type);
+        return Err(ArxosError::Authorization {
+            message: "put_blob is not available on iOS".into(),
+        });
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        let store = ObjectStore::open(&store_path)?;
+        let _write_lock = store.try_lock_exclusive()?;
+        let obj = Object::new(ObjectBody::Blob(BlobBody {
+            content_type,
+            data,
+            properties: BTreeMap::new(),
+        }));
+        let cid = store.put(&obj)?;
+        Ok(ObjectPutResult {
+            cid: cid.to_string(),
+            object_type: "blob".into(),
+        })
+    }
 }
 
 /// Result of creating a signed root.
@@ -206,7 +269,8 @@ pub fn create_root(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: format!("invalid building id: {e}"),
     })?;
-    let repo = BuildingRepository::open_or_follow(&store_path, &bid, None)?;
+    let mut repo = BuildingRepository::open_or_follow(&store_path, &bid, None)?;
+    apply_ffi_seed(&mut repo);
 
     let mut set = BTreeSet::new();
     for s in &object_cids {
@@ -287,7 +351,11 @@ pub fn init_building(
     store_path: String,
     name: Option<String>,
 ) -> Result<FfiBuildingSummary, ArxosError> {
-    let repo = BuildingRepository::init(&store_path, name, None)?;
+    let repo = if let Some(kp) = ffi_keypair() {
+        BuildingRepository::init_ephemeral(&store_path, name, kp)?
+    } else {
+        BuildingRepository::init(&store_path, name, None)?
+    };
     Ok(summary_from_repo(&repo))
 }
 
@@ -360,7 +428,7 @@ pub fn capture_space(
         }
         _ => None,
     };
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     let res = repo.capture_space(&SpaceCapture {
         entity_id,
         name,
@@ -387,7 +455,7 @@ pub fn capture_annotation(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     let res = repo.capture_annotation(&AnnotationCapture::new(text, pose(x, y, z)))?;
     Ok(FfiCapturePutResult {
         cid: res.cid.to_string(),
@@ -407,7 +475,7 @@ pub fn capture_point_cloud(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     let mut properties = BTreeMap::new();
     properties.insert("format".into(), "xyz_f32_le".into());
     properties.insert("source".into(), "device".into());
@@ -441,7 +509,7 @@ pub fn commit_building(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     let res = repo.commit(message)?;
     Ok(FfiCommitSummary {
         root_cid: res.root_cid.to_string(),
@@ -601,7 +669,7 @@ pub fn ingest_room_plan(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     // Owned copy so we can sign while mutably staging (no Keypair: Clone).
     let kp_owned = repo.keypair().map(|k| Keypair::from_seed(*k.seed()));
     let kp = kp_owned.as_ref();
@@ -825,7 +893,7 @@ pub fn merge_building_root(
     let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
         message: e.to_string(),
     })?;
-    let mut repo = BuildingRepository::open(&store_path, &bid)?;
+    let mut repo = open_write(&store_path, &bid)?;
     let other = Cid::from_str(&other_root_cid).map_err(|e| ArxosError::InvalidInput {
         message: format!("invalid other root cid: {e}"),
     })?;
@@ -848,7 +916,6 @@ pub fn pull_remote_root(
     root_cid: String,
     building_id: Option<String>,
     set_head: bool,
-    allow_untrusted: bool,
 ) -> Result<PullResultSummary, ArxosError> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -867,8 +934,9 @@ pub fn pull_remote_root(
             &root_cid,
             building_id.as_deref(),
             set_head,
-            allow_untrusted,
+            false,
             false, // full closure (include blobs)
+            Vec::new(),
         )
         .await?;
 

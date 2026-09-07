@@ -200,6 +200,15 @@ fn descendant_of_local_head<R: ObjectRead + ?Sized>(
     remote: &RootBody,
     local_head: &Cid,
 ) -> Result<bool> {
+    descendant_of_local_head_bounded(store, remote, local_head, MAX_CONTINUITY_ANCESTOR_HOPS)
+}
+
+fn descendant_of_local_head_bounded<R: ObjectRead + ?Sized>(
+    store: &R,
+    remote: &RootBody,
+    local_head: &Cid,
+    max_hops: u32,
+) -> Result<bool> {
     let mut stack: Vec<Cid> = Vec::new();
     if let Some(prev) = remote.previous_root {
         stack.push(prev);
@@ -210,9 +219,9 @@ fn descendant_of_local_head<R: ObjectRead + ?Sized>(
     let mut hops: u32 = 0;
     while let Some(cid) = stack.pop() {
         hops = hops.saturating_add(1);
-        if hops > MAX_CONTINUITY_ANCESTOR_HOPS {
+        if hops > max_hops {
             return Err(Error::Authorization(format!(
-                "remote root ancestor walk exceeded bound ({MAX_CONTINUITY_ANCESTOR_HOPS})"
+                "remote root ancestor walk exceeded bound ({max_hops})"
             )));
         }
         if cid == *local_head {
@@ -304,6 +313,38 @@ mod tests {
             .objects(objects)
             .build_signed(&outsider)
             .unwrap();
+        store.put(&obj).unwrap();
+        let root = RootBody::from_object(&obj).unwrap();
+        root.verify_authors().unwrap();
+        let err = root.verify_with_store(&store).unwrap_err();
+        assert!(matches!(err, Error::Authorization(_)), "{err:?}");
+    }
+
+    #[test]
+    fn extra_unauthorized_coauthor_rejected() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let controller = Keypair::generate();
+        let mallory = Keypair::generate();
+        let bid = BuildingId::new();
+
+        let building = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: None,
+                controller_keys: vec![controller.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bc = store.put(&building).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(bc);
+
+        let mut body = RootBuilder::new(bid, 10).objects(objects).build();
+        body.sign(&controller).unwrap();
+        body.sign(&mallory).unwrap();
+        let obj = body.into_object(10);
         store.put(&obj).unwrap();
         let root = RootBody::from_object(&obj).unwrap();
         root.verify_authors().unwrap();
@@ -429,6 +470,95 @@ mod tests {
         .unwrap_err();
         assert!(
             matches!(err, Error::Authorization(ref m) if m.contains("second genesis")),
+            "{err:?}"
+        );
+    }
+
+    #[test]
+    fn continuity_hop_bound_fail_closed() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: None,
+                controller_keys: vec![kp.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bc = store.put(&building).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(bc);
+        let (g, g_cid) = RootBuilder::new(bid.clone(), 10)
+            .objects(objects.clone())
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&g).unwrap();
+        let (r1, r1_cid) = RootBuilder::new(bid.clone(), 11)
+            .objects(objects.clone())
+            .previous_root(g_cid)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&r1).unwrap();
+        let (r2, _) = RootBuilder::new(bid, 12)
+            .objects(objects)
+            .previous_root(r1_cid)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&r2).unwrap();
+        let remote = RootBody::from_object(&r2).unwrap();
+        let err = descendant_of_local_head_bounded(&store, remote, &g_cid, 1).unwrap_err();
+        assert!(
+            matches!(err, Error::Authorization(ref m) if m.contains("exceeded bound")),
+            "{err:?}"
+        );
+        assert!(descendant_of_local_head_bounded(&store, remote, &g_cid, 8).unwrap());
+    }
+
+    #[test]
+    fn continuity_missing_parent_fail_closed() {
+        let dir = tempdir().unwrap();
+        let store = ObjectStore::open(dir.path()).unwrap();
+        let kp = Keypair::generate();
+        let bid = BuildingId::new();
+        let building = Object::new_with_created(
+            ObjectBody::Building(BuildingBody {
+                building_id: bid.clone(),
+                name: None,
+                controller_keys: vec![kp.public_key()],
+                properties: BTreeMap::new(),
+            }),
+            1,
+        );
+        let bc = store.put(&building).unwrap();
+        let mut objects = BTreeSet::new();
+        objects.insert(bc);
+        let (h0, h0_cid) = RootBuilder::new(bid.clone(), 10)
+            .objects(objects.clone())
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&h0).unwrap();
+        let missing = Cid::from_canonical_bytes(b"missing-parent-not-in-store");
+        let (fork, fork_cid) = RootBuilder::new(bid, 11)
+            .objects(objects)
+            .previous_root(missing)
+            .build_signed(&kp)
+            .unwrap();
+        store.put(&fork).unwrap();
+        let remote = RootBody::from_object(&fork).unwrap();
+        let err = verify_continuous_with_local(
+            remote,
+            &fork_cid,
+            &store,
+            Some(&h0_cid),
+            &BTreeSet::from([bc]),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, Error::NotFound(ref m) if m.contains("missing parent")),
             "{err:?}"
         );
     }

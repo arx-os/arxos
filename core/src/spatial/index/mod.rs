@@ -18,7 +18,7 @@ use crate::error::{Error, Result};
 use crate::object::{
     Aabb, Object, ObjectBody, ObjectHeader, ObjectType, SpatialIndexNodeBody, SCHEMA_VERSION,
 };
-use crate::store::{ObjectRead, ObjectStore};
+use crate::store::ObjectRead;
 
 use super::aabb::POINT_HALF_EXTENT_M;
 
@@ -227,11 +227,11 @@ pub(super) fn node_object(bounds: Aabb, children: Vec<Cid>, object_refs: Vec<Cid
 }
 
 /// Build a hierarchical spatial index into `store`; returns the index root CID.
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::spatial::QueryVolume;
+    use crate::store::ObjectStore;
     use crate::capture::{annotation_object, AnnotationCapture};
     use crate::object::Pose;
     use tempfile::tempdir;

@@ -29,10 +29,15 @@ ios/ArxosApp/Vendor/include/
 .env.*
 !.env.example
 
-# Local-only design notes, ADRs, progress trackers (never commit)
-/docs/
+# Scratch only — committed docs live in docs/
+/docs/_scratch/
+/docs/**/*.local.md
+graphify-out/
+
+# Local stores / sockets
+.arxos/
+*.sock
 
 # Misc
 *.log
 .coverage/
-graphify-out/

@@ -59,7 +59,8 @@ cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building slice "$BID" --z 1.
 ```
 
 Default store path is `.arxos/store`. `cargo run -p arxos-cli -- --help` lists
-the rest of `arx`.
+the rest of `arx`. Store contract: [core/README.md](core/README.md). Threat
+model: [SECURITY.md](SECURITY.md). How to test: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 cargo build --release && cargo test --workspace
@@ -122,8 +123,8 @@ Long-running: `arxos-edge --store /var/lib/arxos/store serve`
 
 ## Export
 
-Exports project the current head. USD is the geometry export. IFC is a narrow
-building / floor / space / notes file with identity metadata, not a certified
+Exports project \(R(S)\). USD is cubes/xforms with identity metadata. IFC emits
+structure plus realized solids (`IFCWALL`, measure pset). Neither is a certified
 CoordinationView.
 
 ```bash

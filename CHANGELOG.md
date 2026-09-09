@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Public `SECURITY.md` and `CONTRIBUTING.md`. `REVIEW.md` removed from `main`.
 - `docs/` may be committed; scratch stays in `docs/_scratch/` and `*.local.md`.
+- Split CLI commands, repository open/capture, merge tests, networking sync,
+  and FFI capture/inbox/locator into focused modules. No wire or fuse change.
 
 ### Serve-owned apply + locator
 

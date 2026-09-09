@@ -65,6 +65,9 @@ namespace arxos_core {
 
     [Throws=ArxosError]
     FfiPushSummary push_staged(string store_path, string building_id, string peer_ticket);
+
+    [Throws=ArxosError]
+    FfiBuildingLocator parse_building_locator(string uri);
 };
 
 dictionary FfiPushSummary {
@@ -72,6 +75,12 @@ dictionary FfiPushSummary {
     u64 accepted;
     u64 duplicate;
     u64 rejected;
+};
+
+dictionary FfiBuildingLocator {
+    string building_id;
+    sequence<string> controllers;
+    string? inbox;
 };
 
 dictionary FfiBuildingSummary {

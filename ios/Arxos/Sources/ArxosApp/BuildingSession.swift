@@ -11,6 +11,7 @@ final class BuildingSession: ObservableObject {
     private static let lastBuildingKey = "arxos.lastBuildingId"
     private static let joinTicketKey = "arxos.joinTicket"
     private static let joinControllersKey = "arxos.joinControllers"
+    private static let joinBuildingIdKey = "arxos.joinBuildingId"
 
     @Published var summary: BuildingSummary?
     @Published var lastCapture: CapturePutResult?
@@ -277,12 +278,29 @@ final class BuildingSession: ObservableObject {
     func joinBuilding(ticketOrUri: String, controllers: String? = nil) {
         lastError = nil
         let raw = ticketOrUri.trimmingCharacters(in: .whitespacesAndNewlines)
-        if raw.hasPrefix("arx://"), let inboxRange = raw.range(of: "inbox=") {
-            let ticket = String(raw[inboxRange.upperBound...]).split(separator: "&").first.map(String.init) ?? raw
-            UserDefaults.standard.set(ticket, forKey: Self.joinTicketKey)
-        } else {
-            UserDefaults.standard.set(raw, forKey: Self.joinTicketKey)
+        if raw.hasPrefix("arx://") || raw.hasPrefix("arx:") {
+            do {
+                let loc = try ArxosCore.parseBuildingLocator(uri: raw)
+                UserDefaults.standard.set(loc.buildingId, forKey: Self.joinBuildingIdKey)
+                if let t = loc.inbox, !t.isEmpty {
+                    UserDefaults.standard.set(t, forKey: Self.joinTicketKey)
+                }
+                if !loc.controllers.isEmpty {
+                    UserDefaults.standard.set(loc.controllers.joined(separator: ","), forKey: Self.joinControllersKey)
+                } else if let c = controllers, !c.isEmpty {
+                    UserDefaults.standard.set(c, forKey: Self.joinControllersKey)
+                }
+                status = "Joined \(loc.buildingId.prefix(12))… ticket \(loc.inbox == nil ? "none" : "saved"); pins=\(loc.controllers.count)"
+                if summary == nil {
+                    openBuilding(id: loc.buildingId, quiet: true)
+                }
+                return
+            } catch {
+                report(error)
+                return
+            }
         }
+        UserDefaults.standard.set(raw, forKey: Self.joinTicketKey)
         if let c = controllers, !c.isEmpty {
             UserDefaults.standard.set(c, forKey: Self.joinControllersKey)
         }

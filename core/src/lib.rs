@@ -21,11 +21,13 @@ pub mod attest;
 pub mod capture;
 pub mod canonical;
 pub mod cid;
+pub mod ctl;
 pub mod crypto;
 pub mod entity;
 pub mod error;
 pub mod fuse;
 pub mod inbox;
+pub mod locator;
 pub mod merge;
 pub mod object;
 pub mod realize;
@@ -65,7 +67,12 @@ pub use entity::{
     CollapseResult, EntityId,
 };
 pub use fuse::{fuse, fuse_active_set};
+pub use ctl::{
+    ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, spawn_serve_ctl, wake_ctl,
+    CtlReply, CtlRequest, ServeSockGuard, SERVE_SOCK_REL,
+};
 pub use inbox::{inbox_add, inbox_path, load_inbox, InboxAdd, InboxEntry, InboxFile};
+pub use locator::BuildingLocator;
 pub use realize::{
     ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM,
 };

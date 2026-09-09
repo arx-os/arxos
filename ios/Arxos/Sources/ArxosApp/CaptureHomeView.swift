@@ -11,6 +11,7 @@ public struct CaptureHomeView: View {
     @StateObject private var session = BuildingSession()
     @State private var buildingName: String = "Home Room"
     @State private var openId: String = ""
+    @State private var joinUri: String = ""
     @State private var showList = false
     @State private var listed: [BuildingSummary] = []
 #if canImport(RoomPlan) && canImport(ARKit) && !targetEnvironment(simulator)
@@ -91,6 +92,17 @@ public struct CaptureHomeView: View {
                                     session.openBuilding(id: openId)
                                 }
                                 .buttonStyle(.bordered)
+                            }
+
+                            HStack {
+                                TextField("Join arx:// or ticket", text: $joinUri)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.caption.monospaced())
+                                Button("Join") {
+                                    session.joinBuilding(ticketOrUri: joinUri)
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(joinUri.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
 
                             Button("List buildings") {

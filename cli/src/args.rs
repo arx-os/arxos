@@ -254,8 +254,9 @@ pub enum NetCommands {
         /// Locator `arx://bldg/<id>?controllers=...&inbox=<ticket>`
         #[arg(long)]
         uri: Option<String>,
+        /// Building id (optional when `--uri` is set)
         #[arg(long)]
-        building: String,
+        building: Option<String>,
         /// Push this store's staged pending CIDs
         #[arg(long, default_value_t = false)]
         staged: bool,
@@ -327,7 +328,11 @@ pub enum BuildingCommands {
     /// `net push`. Does not become official history (`head_root` stays unset
     /// until a controller adopt/apply).
     Follow {
-        building_id: String,
+        /// Building id (optional when `--uri` is set)
+        building_id: Option<String>,
+        /// Locator `arx://bldg/<id>?controllers=...&inbox=...`
+        #[arg(long)]
+        uri: Option<String>,
         #[arg(long)]
         name: Option<String>,
         #[arg(long)]
@@ -460,12 +465,22 @@ pub enum InboxCommands {
         cids: Option<String>,
         #[arg(long)]
         quiet: bool,
+        /// Force in-process open (errors if serve holds the flock)
+        #[arg(long, default_value_t = false)]
+        local: bool,
+        /// Force the serve control socket (`--via serve`)
+        #[arg(long)]
+        via: Option<String>,
     },
     /// Drop CIDs from the inbox only (CAS bytes remain)
     Reject {
         building_id: String,
         #[arg(long)]
         cids: String,
+        #[arg(long, default_value_t = false)]
+        local: bool,
+        #[arg(long)]
+        via: Option<String>,
     },
 }
 

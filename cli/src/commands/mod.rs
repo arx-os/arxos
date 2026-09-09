@@ -19,10 +19,13 @@ use arxos_core::scoring::score_root;
 use arxos_core::spatial::QueryVolume;
 use arxos_core::store::ObjectStore;
 use arxos_core::verify::verify_root_transition;
-use arxos_core::{Cid, EntityId, Keypair, PublicKey};
+use arxos_core::{
+    ctl_send, spawn_serve_ctl, wake_ctl, BuildingLocator, Cid, CtlRequest, EntityId, Keypair,
+    PublicKey,
+};
 use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
 use arxos_networking::sync::{building_ads_from_store, pull_root_with_options, push_facts};
-use arxos_networking::{parse_arx_uri, IrohNode, MdnsDiscovery, ObjectTransport};
+use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
 use arxos_usd::{export_building_usda, import_usda, ExportOptions as UsdExportOptions};
 
 use crate::args::{
@@ -62,6 +65,101 @@ fn parse_cid_set(cids: Option<&str>) -> Result<Option<BTreeSet<Cid>>> {
     Ok(Some(set))
 }
 
+/// Prefer the serve control socket when it accepts; otherwise in-process open.
+fn inbox_ctl(
+    store: &std::path::Path,
+    req: CtlRequest,
+    local: bool,
+    via: Option<&str>,
+) -> Result<arxos_core::CtlReply> {
+    let via_serve = via.map(|s| s.eq_ignore_ascii_case("serve")).unwrap_or(false);
+    if local && via_serve {
+        bail!("--local and --via serve are mutually exclusive");
+    }
+    if via_serve {
+        return ctl_send(store, &req).with_context(|| {
+            format!(
+                "serve control socket {} (is `net serve` running?)",
+                arxos_core::serve_sock_path(store).display()
+            )
+        });
+    }
+    if !local && arxos_core::serve_ctl_path_exists(store) {
+        match ctl_send(store, &req) {
+            Ok(r) => return Ok(r),
+            Err(_) => {
+                // Stale sock: fall through to in-process open (serve is down).
+            }
+        }
+    }
+    let bid = req
+        .building_id
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!("building_id required"))?;
+    let bid = BuildingId::from_str(bid)?;
+    let mut repo = BuildingRepository::open(store, &bid).with_context(|| {
+        format!(
+            "open building {bid} (store may be locked by net serve; omit --local to use the control socket)"
+        )
+    })?;
+    match req.op.as_str() {
+        "inbox_apply" => {
+            let joined = req.cids.as_ref().map(|v| v.join(","));
+            let only = parse_cid_set(joined.as_deref())?;
+            let res = repo.inbox_apply(only.as_ref())?;
+            Ok(arxos_core::CtlReply {
+                ok: true,
+                error: None,
+                root_cid: Some(res.commit.root_cid.to_string()),
+                object_count: Some(res.commit.object_count),
+                applied: Some(res.applied.len() as u64),
+                pending: None,
+                rejected: None,
+                buildings: None,
+            })
+        }
+        "inbox_reject" => {
+            let joined = req.cids.as_ref().map(|v| v.join(","));
+            let set = parse_cid_set(joined.as_deref())?
+                .ok_or_else(|| anyhow::anyhow!("--cids is required"))?;
+            let n = repo.inbox_reject(&set)?;
+            Ok(arxos_core::CtlReply {
+                ok: true,
+                error: None,
+                root_cid: None,
+                object_count: None,
+                applied: None,
+                pending: None,
+                rejected: Some(n),
+                buildings: None,
+            })
+        }
+        other => bail!("local path does not handle op {other}"),
+    }
+}
+
+fn print_ctl_apply(reply: &arxos_core::CtlReply, quiet: bool) -> Result<()> {
+    if !reply.ok {
+        bail!("{}", reply.error.clone().unwrap_or_else(|| "apply failed".into()));
+    }
+    if quiet {
+        if let Some(c) = &reply.root_cid {
+            println!("{c}");
+        }
+    } else {
+        if let Some(c) = &reply.root_cid {
+            println!("root_cid={c}");
+        }
+        if let Some(n) = reply.applied {
+            println!("applied={n}");
+        }
+        if let Some(n) = reply.object_count {
+            println!("object_count={n}");
+        }
+    }
+    Ok(())
+}
+
 fn sigma_skip_line(repo: &BuildingRepository) -> Option<String> {
     let n = sigma_skip_count(repo);
     if n == 0 {
@@ -94,6 +192,33 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                         cli.store.display()
                     )
                 })?;
+
+                // Flock first, then bind (replace stale sock).
+                let (ctl_guard, ctl_stop, ctl_thread) =
+                    spawn_serve_ctl(&cli.store).with_context(|| "bind serve control socket")?;
+                println!(
+                    "ctl_sock={}",
+                    arxos_core::serve_sock_path(&cli.store).display()
+                );
+                if let Ok(st) = ctl_send(
+                    &cli.store,
+                    &CtlRequest {
+                        op: "status".into(),
+                        building_id: None,
+                        cids: None,
+                    },
+                ) {
+                    if let Some(bs) = &st.buildings {
+                        for b in bs {
+                            println!(
+                                "inbox building={} pending={} head={}",
+                                b.building_id,
+                                b.pending,
+                                b.head_root.as_deref().unwrap_or("none")
+                            );
+                        }
+                    }
+                }
 
                 let node = std::sync::Arc::new(
                     IrohNode::bind(&cli.store)
@@ -137,6 +262,10 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                     if let Some(d) = mdns_handle {
                         let _ = d.shutdown();
                     }
+                    ctl_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                    wake_ctl(&cli.store);
+                    let _ = ctl_thread.join();
+                    drop(ctl_guard);
                     node.close().await;
                     // _write_lock drops here
                     return Ok(());
@@ -158,6 +287,10 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 if let Some(d) = mdns_handle {
                     let _ = d.shutdown();
                 }
+                ctl_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                wake_ctl(&cli.store);
+                let _ = ctl_thread.join();
+                drop(ctl_guard);
                 node.close().await;
                 // _write_lock dropped → flock released
             }
@@ -168,16 +301,22 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 staged,
                 cids,
             } => {
-                let (ticket, bid) = if let Some(u) = uri {
-                    let loc = parse_arx_uri(&u)?;
-                    let t = loc
-                        .inbox
-                        .or(peer)
-                        .ok_or_else(|| anyhow::anyhow!("uri missing inbox= ticket; pass --peer"))?;
-                    (t, loc.building_id.to_string())
+                let loc = uri.as_deref().map(BuildingLocator::parse).transpose()?;
+                let bid = if let Some(b) = building {
+                    b
+                } else if let Some(l) = &loc {
+                    l.building_id.to_string()
                 } else {
-                    let t = peer.ok_or_else(|| anyhow::anyhow!("--peer or --uri is required"))?;
-                    (t, building.clone())
+                    bail!("net push requires --building or --uri");
+                };
+                let ticket = if let Some(p) = peer {
+                    p
+                } else if let Some(l) = &loc {
+                    l.inbox.clone().ok_or_else(|| {
+                        anyhow::anyhow!("uri missing inbox= ticket; pass --peer")
+                    })?
+                } else {
+                    bail!("--peer or --uri inbox= is required");
                 };
                 if ticket.starts_with("memory:") {
                     bail!("memory: peers are for in-process tests; pass an Iroh ticket from `net serve`");
@@ -425,10 +564,18 @@ pub fn run_sync(cli: Cli) -> Result<()> {
             }
             BuildingCommands::Follow {
                 building_id,
+                uri,
                 name,
                 quiet,
             } => {
-                let bid = BuildingId::from_str(&building_id)?;
+                let loc = uri.as_deref().map(BuildingLocator::parse).transpose()?;
+                let bid = if let Some(id) = building_id {
+                    BuildingId::from_str(&id)?
+                } else if let Some(l) = &loc {
+                    l.building_id.clone()
+                } else {
+                    bail!("building follow requires a building id or --uri");
+                };
                 let repo = BuildingRepository::open_or_follow(&cli.store, &bid, name)
                     .with_context(|| format!("follow building {bid}"))?;
                 if quiet {
@@ -442,6 +589,17 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             .unwrap_or_else(|| "none".into())
                     );
                     println!("note=scratch follow; push Facts with net push --staged; does not own official history");
+                    if let Some(l) = &loc {
+                        if !l.controllers.is_empty() {
+                            println!("pinned_controllers={}", l.controllers.len());
+                            for k in &l.controllers {
+                                println!("  {k}");
+                            }
+                        }
+                        if let Some(t) = &l.inbox {
+                            println!("inbox_ticket_len={}", t.len());
+                        }
+                    }
                 }
             }
             BuildingCommands::Show { building_id, json } => {
@@ -669,6 +827,11 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     *by_type.entry(ty.to_string()).or_default() += 1;
                 }
                 let active_n = repo.head_object_cids().map(|c| c.len()).unwrap_or(0);
+                let sock = arxos_core::serve_sock_path(&cli.store);
+                let sock_up = sock.exists();
+                let inbox_pending = arxos_core::load_inbox(&cli.store, &bid)
+                    .map(|f| f.pending.len())
+                    .unwrap_or(0);
                 if json {
                     println!(
                         "{}",
@@ -685,6 +848,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             "entities_by_type": by_type,
                             "realize_skipped_high_sigma": sigma_skip_count(&repo),
                             "store_lock": lock_status,
+                            "ctl_sock": sock.display().to_string(),
+                            "ctl_sock_present": sock_up,
+                            "inbox_pending": inbox_pending,
                         }))?
                     );
                 } else {
@@ -707,6 +873,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     if let Some(skip) = sigma_skip_line(&repo) {
                         println!("{skip}");
                     }
+                    println!("inbox_pending={inbox_pending}");
+                    println!("ctl_sock={}", sock.display());
+                    println!("ctl_sock_present={sock_up}");
                     println!("store_lock={lock_status}");
                 }
             }
@@ -993,36 +1162,52 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 building_id,
                 cids,
                 quiet,
+                local,
+                via,
             } => {
-                let bid = BuildingId::from_str(&building_id)?;
-                let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
-                    format!(
-                        "open building {bid} for inbox apply (stop `net serve` / arxos-edge if the store is locked)"
-                    )
-                })?;
-                let only = parse_cid_set(cids.as_deref())?;
-                let res = repo.inbox_apply(only.as_ref())?;
-                if quiet {
-                    println!("{}", res.commit.root_cid);
-                } else {
-                    println!("root_cid={}", res.commit.root_cid);
-                    println!("applied={}", res.applied.len());
-                    for c in &res.applied {
-                        println!("  {c}");
-                    }
-                    println!("object_count={}", res.commit.object_count);
-                    if let Some(skip) = sigma_skip_line(&repo) {
-                        println!("{skip}");
-                    }
-                }
+                let cid_list = cids.as_ref().map(|s| {
+                    s.split(',')
+                        .map(|p| p.trim().to_string())
+                        .filter(|p| !p.is_empty())
+                        .collect::<Vec<_>>()
+                });
+                let reply = inbox_ctl(
+                    &cli.store,
+                    CtlRequest {
+                        op: "inbox_apply".into(),
+                        building_id: Some(building_id.clone()),
+                        cids: cid_list,
+                    },
+                    local,
+                    via.as_deref(),
+                )?;
+                print_ctl_apply(&reply, quiet)?;
             }
-            InboxCommands::Reject { building_id, cids } => {
-                let bid = BuildingId::from_str(&building_id)?;
-                let repo = BuildingRepository::open(&cli.store, &bid)?;
-                let set = parse_cid_set(Some(&cids))?
-                    .ok_or_else(|| anyhow::anyhow!("--cids is required"))?;
-                let n = repo.inbox_reject(&set)?;
-                println!("rejected={n}");
+            InboxCommands::Reject {
+                building_id,
+                cids,
+                local,
+                via,
+            } => {
+                let cid_list: Vec<String> = cids
+                    .split(',')
+                    .map(|p| p.trim().to_string())
+                    .filter(|p| !p.is_empty())
+                    .collect();
+                let reply = inbox_ctl(
+                    &cli.store,
+                    CtlRequest {
+                        op: "inbox_reject".into(),
+                        building_id: Some(building_id),
+                        cids: Some(cid_list),
+                    },
+                    local,
+                    via.as_deref(),
+                )?;
+                if !reply.ok {
+                    bail!("{}", reply.error.unwrap_or_else(|| "reject failed".into()));
+                }
+                println!("rejected={}", reply.rejected.unwrap_or(0));
             }
         },
         Commands::Capture { command } => match command {

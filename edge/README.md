@@ -14,13 +14,14 @@ arxos-edge export-ifc $BID -o out.ifc
 arxos-edge --store /var/lib/arxos/store serve
 ```
 
-`serve` prints a peer id and ticket for pullers, holds `store.lock` for the
-process lifetime, and exits cleanly on Ctrl-C (heads remain on disk).
+`serve` prints a peer id, Iroh ticket, and `ctl_sock=$STORE/meta/serve.sock`
+(mode 0600). It holds `store.lock` for the process lifetime and exits cleanly
+on Ctrl-C (heads remain on disk).
 
-`inbox apply` is a controller commit and needs the exclusive store lock, so it
-**cannot** run against the same path while `serve` is up. Stop serve, apply,
-then start serve again. Push (`PutObject` / `PushFacts`) is handled by serve
-and never moves `head_root`.
+`arx inbox apply $BID` talks to that socket while serve is running — **do not
+stop systemd to apply**. `--local` forces an in-process open and fails if the
+flock is held. Push (`PutObject` / `PushFacts`) never moves `head_root`.
+Apply over Iroh is out of scope (local socket only).
 
 ## Packaging & Deployment
 

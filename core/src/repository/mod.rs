@@ -124,6 +124,8 @@ pub struct BuildingRepository {
     /// Exclusive store lock when this handle may write. `None` for
     /// [`Self::open_read`].
     _write_lock: Option<crate::store::WriteGuard>,
+    /// Parent process already holds `store.lock` (serve-owned apply).
+    assume_exclusive: bool,
     record: BuildingRecord,
     working_set: WorkingSet,
     keypair: Option<Keypair>,
@@ -227,6 +229,7 @@ impl BuildingRepository {
         Ok(Self {
             store,
             _write_lock: Some(write_lock),
+            assume_exclusive: false,
             record,
             working_set,
             keypair: Some(kp),
@@ -239,7 +242,18 @@ impl BuildingRepository {
     /// Fails immediately if another process holds [`crate::store::WriteGuard`].
     /// For score / verify / export, use [`Self::open_read`].
     pub fn open(store_path: impl AsRef<Path>, building_id: &BuildingId) -> Result<Self> {
-        Self::open_with_lock(store_path, building_id, true)
+        Self::open_with_lock(store_path, building_id, true, false)
+    }
+
+    /// Open for writes **without** taking `store.lock`.
+    ///
+    /// The caller must already hold the exclusive flock (serve process). A
+    /// second [`Self::open`] from another process still fails closed.
+    pub fn open_assuming_exclusive(
+        store_path: impl AsRef<Path>,
+        building_id: &BuildingId,
+    ) -> Result<Self> {
+        Self::open_with_lock(store_path, building_id, false, true)
     }
 
     /// Open an existing building for read-only use (no flock).
@@ -253,13 +267,14 @@ impl BuildingRepository {
     ///
     /// Mutating methods return [`Error::Store`] on this handle.
     pub fn open_read(store_path: impl AsRef<Path>, building_id: &BuildingId) -> Result<Self> {
-        Self::open_with_lock(store_path, building_id, false)
+        Self::open_with_lock(store_path, building_id, false, false)
     }
 
     fn open_with_lock(
         store_path: impl AsRef<Path>,
         building_id: &BuildingId,
         exclusive: bool,
+        assume_exclusive: bool,
     ) -> Result<Self> {
         let store = ObjectStore::open(store_path.as_ref())?;
         let write_lock = if exclusive {
@@ -301,6 +316,7 @@ impl BuildingRepository {
         Ok(Self {
             store,
             _write_lock: write_lock,
+            assume_exclusive,
             record,
             working_set,
             keypair,
@@ -336,11 +352,11 @@ impl BuildingRepository {
 
     /// True when opened with [`Self::open_read`] (no exclusive store lock).
     pub fn is_read_only(&self) -> bool {
-        self._write_lock.is_none()
+        self._write_lock.is_none() && !self.assume_exclusive
     }
 
     fn require_write(&self) -> Result<()> {
-        if self._write_lock.is_none() {
+        if self._write_lock.is_none() && !self.assume_exclusive {
             return Err(Error::Store(
                 "read-only BuildingRepository (opened with open_read); use BuildingRepository::open for writes"
                     .into(),
@@ -793,6 +809,7 @@ impl BuildingRepository {
                 Ok(Self {
                     store,
                     _write_lock: Some(write_lock),
+                    assume_exclusive: false,
                     record,
                     working_set: WorkingSet::new(),
                     keypair,

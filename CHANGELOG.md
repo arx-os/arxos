@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Serve-owned apply + locator
+
+- `arx://bldg/<id>?controllers=&inbox=` parser in core (`BuildingLocator`).
+- `$STORE/meta/serve.sock` (0600): `inbox apply` while `net serve` holds the flock.
+- `building follow --uri`, `net push --uri`; iOS Join field accepts the URI.
+
 ### Inbox / thin client
 
 - Meta inbox `$STORE/meta/inbox/<building_id>.json`. Push never sets `head_root`.

@@ -13,10 +13,10 @@ Field contributors write the as-built record at the wall.
 1. **Capture.** A phone, laptop, or edge node mints Facts (walls, openings, equipment, notes). Point clouds and meshes may be evidence; they are not \(B = R(S)\).
 2. **Commit / fuse.** Each object is an immutable file named by a hash of its contents. A second walk of the same `EntityId` fuses into one live version. Controllers — keys on the Building object — commit, adopt, and merge.
 3. **Push \(\Delta\).** Contributors `net push` canonical Fact bytes into the building **inbox** (`meta/inbox/<id>.json`). Push never moves `head_root`.
-4. **Apply.** A controller runs `arx inbox apply $BID`, which stages pending Facts and `commit`s (existing fuse). Only then does official \(S\) change.
+4. **Apply.** A controller runs `arx inbox apply $BID`. If `net serve` is up, apply goes through `$STORE/meta/serve.sock` (the lock holder). Head still moves only in `inbox_apply`.
 5. **Realize / project.** \(B = R(S)\) is oriented boxes. Export IFC (`IFCWALL`) or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
 
-One process writes a given store at a time. Extra work is just another object CID plus an inbox list. There is no proposal object type. `inbox apply` cannot run while `net serve` / `arxos-edge serve` holds `store.lock` — stop serve first.
+One process writes a given store at a time. Extra work is just another object CID plus an inbox list. There is no proposal object type. Do not stop systemd to apply — serve owns the writer lock and the control socket.
 
 ## DePIN and rewards
 
@@ -36,7 +36,8 @@ Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do 
 - Realize solids and project IFC (`IFCWALL`), USD (cube prims), ASCII (`arx building slice`)
 - LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
 - Merge concurrent controller tips (entity conflicts fuse)
-- Contributor **inbox**: `net push` Facts; controller `inbox apply` fuses them into the head
+- Contributor **inbox**: `net push` Facts; controller `inbox apply` fuses them into the head (via serve socket while `net serve` is running)
+- Join locator `arx://bldg/<id>?controllers=<pk>&inbox=<ticket>` (`building follow --uri`, `net push --uri`)
 
 Not built: accounts, an HTTP site, a public directory, or public Iroh relays.
 A non-controller cannot apply the inbox or commit official history
@@ -79,10 +80,17 @@ pushed, pending apply). Without a ticket, local auto-commit remains force-quit
 safety; **Export store…** is Advanced/debug, not the field loop.
 Details: [ios/README.md](ios/README.md).
 
-Locator (name is discovery; trust is pinned keys):
+Locator (name is discovery; trust is pinned keys, not DNS/IP):
 
 ```text
 arx://bldg/<BuildingId>?controllers=<pk,pk>&inbox=<iroh-ticket>
+```
+
+```bash
+URI="arx://bldg/${BID}?controllers=${PK}&inbox=${TICKET}"
+cargo run -q -p arxos-cli -- --store "$SCRATCH" building follow --uri "$URI"
+cargo run -q -p arxos-cli -- --store "$SCRATCH" net push --uri "$URI" --staged
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" inbox apply "$BID"   # works while serve runs
 ```
 
 ## Pull and merge

@@ -337,6 +337,21 @@ public enum ArxosCore {
         }
     }
 
+    public struct BuildingLocator: Equatable, Sendable {
+        public var buildingId: String
+        public var controllers: [String]
+        public var inbox: String?
+    }
+
+    public static func parseBuildingLocator(uri: String) throws -> BuildingLocator {
+        let r = try uniffiParseBuildingLocator(uri: uri)
+        return BuildingLocator(
+            buildingId: r.buildingId,
+            controllers: r.controllers,
+            inbox: r.inbox
+        )
+    }
+
     public struct PushSummary: Equatable, Sendable {
         public var buildingId: String
         public var accepted: UInt64

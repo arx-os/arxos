@@ -54,7 +54,9 @@ Pending contributor Facts live in **meta**, not a new object type:
 <meta/inbox/<building_id>.json>
 ```
 
-`PutObject` / `PushFacts` ingest canonical bytes into the CAS and append leaf CIDs to that file. They **never** call adopt or move `head_root`. `BuildingRepository::inbox_apply` (controller key, exclusive lock) stages those CIDs and `commit`s — the same fuse-on-commit path as capture. `inbox apply` cannot run while `net serve` holds `store.lock`; stop serve first.
+`PutObject` / `PushFacts` ingest canonical bytes into the CAS and append leaf CIDs to that file. They **never** call adopt or move `head_root`. `BuildingRepository::inbox_apply` (controller key) stages those CIDs and `commit`s — the same fuse-on-commit path as capture.
+
+When `net serve` holds `store.lock`, apply runs **in that process** via `$STORE/meta/serve.sock` (`BuildingRepository::open_assuming_exclusive`). A second `open` from another process still fails closed. Stale sockets are unlinked only after flock is taken.
 
 ### Allowed `ObjectStore` construction
 

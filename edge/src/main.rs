@@ -128,6 +128,30 @@ async fn serve_async(store_path: PathBuf, mdns: bool, instance: Option<String>) 
         .try_lock_exclusive()
         .context("acquire store write lock (is another writer running?)")?;
 
+    let (ctl_guard, ctl_stop, ctl_thread) =
+        arxos_core::spawn_serve_ctl(&store_path).context("bind serve control socket")?;
+    println!(
+        "  ctl_sock={}",
+        arxos_core::serve_sock_path(&store_path).display()
+    );
+    if let Ok(st) = arxos_core::ctl_send(
+        &store_path,
+        &arxos_core::CtlRequest {
+            op: "status".into(),
+            building_id: None,
+            cids: None,
+        },
+    ) {
+        if let Some(bs) = &st.buildings {
+            for b in bs {
+                println!(
+                    "  inbox building={} pending={}",
+                    b.building_id, b.pending
+                );
+            }
+        }
+    }
+
     let node = Arc::new(
         arxos_networking::IrohNode::bind(&store_path)
             .await
@@ -187,6 +211,10 @@ async fn serve_async(store_path: PathBuf, mdns: bool, instance: Option<String>) 
         .context("wait for ctrl-c")?;
     println!("shutting down…");
     accept.abort();
+    ctl_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    arxos_core::wake_ctl(&store_path);
+    let _ = ctl_thread.join();
+    drop(ctl_guard);
     node.close().await;
     // _write_lock dropped → flock released; heads remain on disk.
     Ok(())

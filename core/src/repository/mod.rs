@@ -132,8 +132,11 @@ pub struct BuildingRepository {
 
 mod adopt;
 mod commit;
+mod inbox;
 mod meta;
 mod query;
+
+pub use inbox::{referenced_cids, reject_inbox_object, InboxApplyResult};
 
 impl BuildingRepository {
     /// Initialize a new building repository in `store_path`.

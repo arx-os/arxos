@@ -4,7 +4,7 @@ A local-first record of the built world.
 
 Contributors commit **Facts** (tiny signed geometric claims). The official building is a state map \(S\) from names to primitives; owners fuse rescans, realize solids, and project IFC / USD / ASCII. Arxos is not a renderer and does not store a scan file as the building.
 
-Walk a site with a LiDAR iPhone. The phone is a camera that mints Facts into a local CAS. Copy that store to a machine to inspect it, export IFC or USD, or pull it onto another replica. There is no cloud in the loop.
+Walk a site with a LiDAR iPhone. The phone is a camera that mints Facts. Official history lives on a controller replica (laptop / edge). Folder copy of the store is **disaster recovery / debug**, not the field loop. There is no cloud in the loop.
 
 ## How it works
 
@@ -12,10 +12,11 @@ Field contributors write the as-built record at the wall.
 
 1. **Capture.** A phone, laptop, or edge node mints Facts (walls, openings, equipment, notes). Point clouds and meshes may be evidence; they are not \(B = R(S)\).
 2. **Commit / fuse.** Each object is an immutable file named by a hash of its contents. A second walk of the same `EntityId` fuses into one live version. Controllers — keys on the Building object — commit, adopt, and merge.
-3. **Replicate.** Another machine pulls a Root over the LAN (Iroh + mDNS) or receives the store folder. Official history is whoever those controller keys accept.
-4. **Realize / project.** \(B = R(S)\) is oriented boxes. Export IFC or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
+3. **Push \(\Delta\).** Contributors `net push` canonical Fact bytes into the building **inbox** (`meta/inbox/<id>.json`). Push never moves `head_root`.
+4. **Apply.** A controller runs `arx inbox apply $BID`, which stages pending Facts and `commit`s (existing fuse). Only then does official \(S\) change.
+5. **Realize / project.** \(B = R(S)\) is oriented boxes. Export IFC (`IFCWALL`) or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
 
-One process writes a given store at a time. Extra work is just another Root CID. There is no proposal type.
+One process writes a given store at a time. Extra work is just another object CID plus an inbox list. There is no proposal object type. `inbox apply` cannot run while `net serve` / `arxos-edge serve` holds `store.lock` — stop serve first.
 
 ## DePIN and rewards
 
@@ -35,9 +36,10 @@ Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do 
 - Realize solids and project IFC (`IFCWALL`), USD (cube prims), ASCII (`arx building slice`)
 - LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
 - Merge concurrent controller tips (entity conflicts fuse)
+- Contributor **inbox**: `net push` Facts; controller `inbox apply` fuses them into the head
 
-Not built: accounts, an HTTP site, a public directory, or an inbox for
-non-controllers. A non-controller cannot commit official history
+Not built: accounts, an HTTP site, a public directory, or public Iroh relays.
+A non-controller cannot apply the inbox or commit official history
 (`arx building add-controller`).
 
 ## Quick start
@@ -52,6 +54,7 @@ BID=$(cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building init --name "
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" capture simulate "$BID" --commit
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building status "$BID"
 cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" entity list "$BID"
+cargo run -q -p arxos-cli -- --store "$ARXOS_STORE" building slice "$BID" --z 1.2
 ```
 
 Default store path is `.arxos/store`. `cargo run -p arxos-cli -- --help` lists
@@ -70,11 +73,17 @@ LiDAR iPhone, iOS 17+, full Xcode (not Command Line Tools).
 open ios/ArxosApp/ArxosApp.xcodeproj
 ```
 
-Init a building, start a RoomPlan scan, stop. Facts are ingested and
-auto-committed into Application Support (`arxos-store`, excluded from backup).
-Use **Export store…** to AirDrop a snapshot to a Mac and point `arx` at it with
-`--store`. The app is a camera that mints Facts, not a scan-file folder as the
-happy path. Details: [ios/README.md](ios/README.md).
+Init a building, start a RoomPlan scan, stop. Facts are ingested. With a join
+ticket, the app **pushes** staged Facts to the building inbox (status: facts
+pushed, pending apply). Without a ticket, local auto-commit remains force-quit
+safety; **Export store…** is Advanced/debug, not the field loop.
+Details: [ios/README.md](ios/README.md).
+
+Locator (name is discovery; trust is pinned keys):
+
+```text
+arx://bldg/<BuildingId>?controllers=<pk,pk>&inbox=<iroh-ticket>
+```
 
 ## Pull and merge
 

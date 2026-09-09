@@ -25,6 +25,7 @@ pub mod crypto;
 pub mod entity;
 pub mod error;
 pub mod fuse;
+pub mod inbox;
 pub mod merge;
 pub mod object;
 pub mod realize;
@@ -64,7 +65,10 @@ pub use entity::{
     CollapseResult, EntityId,
 };
 pub use fuse::{fuse, fuse_active_set};
-pub use realize::{ascii_slice, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM};
+pub use inbox::{inbox_add, inbox_path, load_inbox, InboxAdd, InboxEntry, InboxFile};
+pub use realize::{
+    ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM,
+};
 pub use state::BuildingState;
 pub use scoring::{
     attribute_object, score_cids, score_cids_with_policy, score_contributions,
@@ -83,7 +87,8 @@ pub use object::{
 };
 pub use object::Aabb;
 pub use repository::{
-    AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult, ObjectIngest,
+    AdoptOptions, BuildingRecord, BuildingRepository, CaptureResult, CommitResult, InboxApplyResult,
+    ObjectIngest,
 };
 pub use root::{
     distance_from_checkpoint, get_root_closure_blobs, get_root_closure_blobs_with_options,

@@ -21,15 +21,58 @@ use arxos_core::store::ObjectStore;
 use arxos_core::verify::verify_root_transition;
 use arxos_core::{Cid, EntityId, Keypair, PublicKey};
 use arxos_ifc::{export_building_ifc, import_ifc, ExportOptions as IfcExportOptions};
-use arxos_networking::sync::{building_ads_from_store, pull_root_with_options};
-use arxos_networking::{IrohNode, MdnsDiscovery, ObjectTransport};
+use arxos_networking::sync::{building_ads_from_store, pull_root_with_options, push_facts};
+use arxos_networking::{parse_arx_uri, IrohNode, MdnsDiscovery, ObjectTransport};
 use arxos_usd::{export_building_usda, import_usda, ExportOptions as UsdExportOptions};
 
 use crate::args::{
     BuildingCommands, CaptureCommands, Cli, Commands, EntityCommands, ExportCommands,
-    ImportCommands, KeyCommands, MergeCommands, NetCommands, ObjectCommands, RootCommands,
-    SpatialCommands,
+    ImportCommands, InboxCommands, KeyCommands, MergeCommands, NetCommands, ObjectCommands,
+    RootCommands, SpatialCommands,
 };
+
+fn sigma_skip_count(repo: &BuildingRepository) -> u64 {
+    let Some(head) = repo.head_root() else {
+        return 0;
+    };
+    let Ok(root_obj) = repo.get_object(&head) else {
+        return 0;
+    };
+    let Ok(root) = RootBody::from_object(&root_obj) else {
+        return 0;
+    };
+    let Ok(state) = arxos_core::BuildingState::from_root(repo, root) else {
+        return 0;
+    };
+    arxos_core::high_sigma_skip_count(&state)
+}
+
+fn parse_cid_set(cids: Option<&str>) -> Result<Option<BTreeSet<Cid>>> {
+    let Some(s) = cids else {
+        return Ok(None);
+    };
+    let mut set = BTreeSet::new();
+    for part in s.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        set.insert(Cid::from_str(part).with_context(|| format!("invalid cid: {part}"))?);
+    }
+    Ok(Some(set))
+}
+
+fn sigma_skip_line(repo: &BuildingRepository) -> Option<String> {
+    let n = sigma_skip_count(repo);
+    if n == 0 {
+        None
+    } else {
+        Some(format!(
+            "realize_skipped_high_sigma={n} (sigma_mm > {} mm; facts remain in S)",
+            arxos_core::SIGMA_EXCLUDE_MM
+        ))
+    }
+}
 
 pub async fn run_async(cli: Cli) -> Result<()> {
     match cli.command {
@@ -117,6 +160,85 @@ pub async fn run_async(cli: Cli) -> Result<()> {
                 }
                 node.close().await;
                 // _write_lock dropped → flock released
+            }
+            NetCommands::Push {
+                peer,
+                uri,
+                building,
+                staged,
+                cids,
+            } => {
+                let (ticket, bid) = if let Some(u) = uri {
+                    let loc = parse_arx_uri(&u)?;
+                    let t = loc
+                        .inbox
+                        .or(peer)
+                        .ok_or_else(|| anyhow::anyhow!("uri missing inbox= ticket; pass --peer"))?;
+                    (t, loc.building_id.to_string())
+                } else {
+                    let t = peer.ok_or_else(|| anyhow::anyhow!("--peer or --uri is required"))?;
+                    (t, building.clone())
+                };
+                if ticket.starts_with("memory:") {
+                    bail!("memory: peers are for in-process tests; pass an Iroh ticket from `net serve`");
+                }
+                let bid_parsed = BuildingId::from_str(&bid)?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid_parsed)
+                    .with_context(|| {
+                        format!("open building {bid} (scratch: `building follow {bid}` first)")
+                    })?;
+                let mut leaf: Vec<Cid> = Vec::new();
+                if staged {
+                    leaf.extend(repo.record().pending.iter().copied());
+                }
+                if let Some(set) = parse_cid_set(cids.as_deref())? {
+                    leaf.extend(set);
+                }
+                if leaf.is_empty() {
+                    bail!("nothing to push: pass --staged and/or --cids");
+                }
+                let mut objects: Vec<(String, Vec<u8>)> = Vec::new();
+                let mut seen = BTreeSet::new();
+                for cid in &leaf {
+                    for dep in arxos_core::repository::referenced_cids(&repo.get_object(cid)?) {
+                        if seen.insert(dep) {
+                            if let Ok(b) = repo.get_object_bytes(&dep) {
+                                objects.push((dep.to_string(), b));
+                            }
+                        }
+                    }
+                    if seen.insert(*cid) {
+                        objects.push((cid.to_string(), repo.get_object_bytes(cid)?));
+                    }
+                }
+                let leaves: Vec<String> = leaf.iter().map(|c| c.to_string()).collect();
+                let author = repo
+                    .keypair()
+                    .map(|k| k.public_key().to_string())
+                    .unwrap_or_default();
+                drop(repo);
+
+                let node = IrohNode::bind(&cli.store)
+                    .await
+                    .with_context(|| format!("bind iroh on {}", cli.store.display()))?;
+                let res = push_facts(
+                    &node,
+                    &ticket,
+                    &bid,
+                    &objects,
+                    &leaves,
+                    &author,
+                )
+                .await?;
+                node.close().await;
+                println!("building_id={}", res.building_id);
+                println!("put_ok={} put_rejected={}", res.put_ok, res.put_rejected);
+                println!("accepted={}", res.accepted.len());
+                println!("duplicate={}", res.duplicate.len());
+                println!("rejected={}", res.rejected.len());
+                for r in &res.rejected {
+                    println!("  reject {} {}", r.cid, r.reason);
+                }
             }
             NetCommands::Fetch {
                 peer,
@@ -299,6 +421,27 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             .map(|c| c.to_string())
                             .unwrap_or_else(|| "none".into())
                     );
+                }
+            }
+            BuildingCommands::Follow {
+                building_id,
+                name,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open_or_follow(&cli.store, &bid, name)
+                    .with_context(|| format!("follow building {bid}"))?;
+                if quiet {
+                    println!("{}", repo.building_id());
+                } else {
+                    println!("building_id={}", repo.building_id());
+                    println!(
+                        "head_root={}",
+                        repo.head_root()
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!("note=scratch follow; push Facts with net push --staged; does not own official history");
                 }
             }
             BuildingCommands::Show { building_id, json } => {
@@ -540,6 +683,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             "controller_keys": controllers.iter().map(|k| k.to_string()).collect::<Vec<_>>(),
                             "entities": heads.len(),
                             "entities_by_type": by_type,
+                            "realize_skipped_high_sigma": sigma_skip_count(&repo),
                             "store_lock": lock_status,
                         }))?
                     );
@@ -559,6 +703,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("entities={}", heads.len());
                     for (ty, n) in by_type {
                         println!("  entities.{ty}={n}");
+                    }
+                    if let Some(skip) = sigma_skip_line(&repo) {
+                        println!("{skip}");
                     }
                     println!("store_lock={lock_status}");
                 }
@@ -659,6 +806,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 } else {
                     println!("building_id={bid}");
                     println!("entities={}", heads.len());
+                    if let Some(skip) = sigma_skip_line(&repo) {
+                        println!("{skip}");
+                    }
                     for (eid, cid, ty) in heads {
                         let obj = repo.get_object(&cid)?;
                         let mut extra = String::new();
@@ -813,6 +963,66 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     }
                     println!("support_count={}", obj.effective_support_count());
                 }
+            }
+        },
+        Commands::Inbox { command } => match command {
+            InboxCommands::List { building_id, json } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)?;
+                let file = repo.inbox_list()?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&file)?);
+                } else {
+                    println!("building_id={bid}");
+                    println!(
+                        "head_root={}",
+                        repo.head_root()
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| "none".into())
+                    );
+                    println!("pending={}", file.pending.len());
+                    for e in &file.pending {
+                        println!(
+                            "  {}  author={}  received={}",
+                            e.cid, e.author_hex, e.received_unix
+                        );
+                    }
+                }
+            }
+            InboxCommands::Apply {
+                building_id,
+                cids,
+                quiet,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let mut repo = BuildingRepository::open(&cli.store, &bid).with_context(|| {
+                    format!(
+                        "open building {bid} for inbox apply (stop `net serve` / arxos-edge if the store is locked)"
+                    )
+                })?;
+                let only = parse_cid_set(cids.as_deref())?;
+                let res = repo.inbox_apply(only.as_ref())?;
+                if quiet {
+                    println!("{}", res.commit.root_cid);
+                } else {
+                    println!("root_cid={}", res.commit.root_cid);
+                    println!("applied={}", res.applied.len());
+                    for c in &res.applied {
+                        println!("  {c}");
+                    }
+                    println!("object_count={}", res.commit.object_count);
+                    if let Some(skip) = sigma_skip_line(&repo) {
+                        println!("{skip}");
+                    }
+                }
+            }
+            InboxCommands::Reject { building_id, cids } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open(&cli.store, &bid)?;
+                let set = parse_cid_set(Some(&cids))?
+                    .ok_or_else(|| anyhow::anyhow!("--cids is required"))?;
+                let n = repo.inbox_reject(&set)?;
+                println!("rejected={n}");
             }
         },
         Commands::Capture { command } => match command {

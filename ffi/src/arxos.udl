@@ -62,6 +62,16 @@ namespace arxos_core {
 
     [Throws=ArxosError]
     void export_ifc(string store_path, string building_id, string output_path);
+
+    [Throws=ArxosError]
+    FfiPushSummary push_staged(string store_path, string building_id, string peer_ticket);
+};
+
+dictionary FfiPushSummary {
+    string building_id;
+    u64 accepted;
+    u64 duplicate;
+    u64 rejected;
 };
 
 dictionary FfiBuildingSummary {

@@ -17,6 +17,11 @@ arxos-edge --store /var/lib/arxos/store serve
 `serve` prints a peer id and ticket for pullers, holds `store.lock` for the
 process lifetime, and exits cleanly on Ctrl-C (heads remain on disk).
 
+`inbox apply` is a controller commit and needs the exclusive store lock, so it
+**cannot** run against the same path while `serve` is up. Stop serve, apply,
+then start serve again. Push (`PutObject` / `PushFacts`) is handled by serve
+and never moves `head_root`.
+
 ## Packaging & Deployment
 
 ### Docker Multi-Arch Build

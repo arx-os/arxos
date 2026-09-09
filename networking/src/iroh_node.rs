@@ -194,6 +194,29 @@ impl IrohNode {
             Message::AnnounceRoot { .. } => Message::Ok {
                 detail: Some("ignored: advertisements are local-store only".into()),
             },
+            Message::PutObject { cid, bytes } => {
+                match crate::sync::serve_put_object(&self.store_path, &cid, &bytes) {
+                    Ok(m) => m,
+                    Err(e) => Message::Error {
+                        message: e.to_string(),
+                    },
+                }
+            }
+            Message::PushFacts {
+                building_id,
+                leaf_cids,
+                author_hex,
+            } => match crate::sync::serve_push_facts(
+                &self.store_path,
+                &building_id,
+                &leaf_cids,
+                &author_hex,
+            ) {
+                Ok(m) => m,
+                Err(e) => Message::Error {
+                    message: e.to_string(),
+                },
+            },
             other => Message::Error {
                 message: format!("unexpected request: {other:?}"),
             },
@@ -332,7 +355,10 @@ impl ObjectTransport for IrohNode {
     }
 
     fn advertise_buildings(&self) -> BoxFuture<'_, Result<Vec<BuildingHeadAd>>> {
-        Box::pin(async move { Ok(self.buildings.read().await.clone()) })
+        Box::pin(async move {
+            // Ads are read-only from on-disk BuildingRecord heads, not inbound AnnounceRoot.
+            Ok(building_ads_from_store(&self.store_path).unwrap_or_default())
+        })
     }
 
     fn fetch_object<'a>(
@@ -381,6 +407,46 @@ impl ObjectTransport for IrohNode {
                 Message::Error { message } => Err(NetError::Transport(message)),
                 other => Err(NetError::Protocol(format!("unexpected: {other:?}"))),
             }
+        })
+    }
+
+    fn put_object<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        cid: &'a str,
+        bytes: &'a [u8],
+    ) -> BoxFuture<'a, Result<Message>> {
+        Box::pin(async move {
+            let addr = Self::parse_ticket(peer)?;
+            self.request(
+                addr,
+                Message::PutObject {
+                    cid: cid.to_string(),
+                    bytes: bytes.to_vec(),
+                },
+            )
+            .await
+        })
+    }
+
+    fn push_facts<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        building_id: &'a str,
+        leaf_cids: &'a [String],
+        author_hex: &'a str,
+    ) -> BoxFuture<'a, Result<Message>> {
+        Box::pin(async move {
+            let addr = Self::parse_ticket(peer)?;
+            self.request(
+                addr,
+                Message::PushFacts {
+                    building_id: building_id.to_string(),
+                    leaf_cids: leaf_cids.to_vec(),
+                    author_hex: author_hex.to_string(),
+                },
+            )
+            .await
         })
     }
 }

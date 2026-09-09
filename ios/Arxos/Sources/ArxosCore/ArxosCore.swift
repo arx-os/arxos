@@ -337,6 +337,32 @@ public enum ArxosCore {
         }
     }
 
+    public struct PushSummary: Equatable, Sendable {
+        public var buildingId: String
+        public var accepted: UInt64
+        public var duplicate: UInt64
+        public var rejected: UInt64
+    }
+
+    /// Push staged Facts to a peer inbox. Never sets remote head.
+    /// Requires generated UniFFI bindings (`./ios/scripts/prep.sh` after UDL change).
+    public static func pushStaged(
+        storePath: String,
+        buildingId: String,
+        peerTicket: String
+    ) throws -> PushSummary {
+        try ensureDeviceSeed(storePath: storePath)
+        let r = try uniffiPushStaged(
+            storePath: storePath, buildingId: buildingId, peerTicket: peerTicket
+        )
+        return PushSummary(
+            buildingId: r.buildingId,
+            accepted: r.accepted,
+            duplicate: r.duplicate,
+            rejected: r.rejected
+        )
+    }
+
     public static func ingestRoomPlan(
         storePath: String,
         buildingId: String,

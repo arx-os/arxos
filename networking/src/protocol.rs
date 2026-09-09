@@ -70,9 +70,40 @@ pub enum Message {
     Ok {
         detail: Option<String>,
     },
+    /// Ingest one canonical object into the peer CAS. Never sets head.
+    PutObject {
+        cid: String,
+        bytes: Vec<u8>,
+    },
+    PutObjectOk {
+        cid: String,
+    },
+    PutObjectReject {
+        cid: String,
+        message: String,
+    },
+    /// Bind already-ingested leaf Facts to a building inbox. Never sets head.
+    PushFacts {
+        building_id: String,
+        leaf_cids: Vec<String>,
+        author_hex: String,
+    },
+    PushFactsOk {
+        building_id: String,
+        accepted: Vec<String>,
+        duplicate: Vec<String>,
+        rejected: Vec<CidReject>,
+    },
     Error {
         message: String,
     },
+}
+
+/// One rejected CID with a reason (PushFacts).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CidReject {
+    pub cid: String,
+    pub reason: String,
 }
 
 fn default_include_blobs() -> bool {
@@ -144,6 +175,29 @@ mod tests {
         let enc = encode_message(&msg).unwrap();
         assert!(decode_message(&enc[..3]).unwrap().is_none());
         assert!(decode_message(&enc[..enc.len() - 1]).unwrap().is_none());
+    }
+
+    #[test]
+    fn roundtrip_put_object() {
+        let msg = Message::PutObject {
+            cid: "b3:abc".into(),
+            bytes: vec![1, 2, 3],
+        };
+        let enc = encode_message(&msg).unwrap();
+        let (dec, _) = decode_message(&enc).unwrap().unwrap();
+        assert_eq!(dec, msg);
+    }
+
+    #[test]
+    fn roundtrip_push_facts() {
+        let msg = Message::PushFacts {
+            building_id: "01ABC".into(),
+            leaf_cids: vec!["b3:aa".into()],
+            author_hex: "ed25519:00".into(),
+        };
+        let enc = encode_message(&msg).unwrap();
+        let (dec, _) = decode_message(&enc).unwrap().unwrap();
+        assert_eq!(dec, msg);
     }
 
     #[test]

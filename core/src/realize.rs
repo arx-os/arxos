@@ -82,6 +82,25 @@ pub struct Realization {
     pub notes: Vec<(crate::cid::Cid, String, Pose)>,
 }
 
+/// Count Facts that \(R(S)\) skips because \(\sigma\) exceeds [`SIGMA_EXCLUDE_MM`].
+pub fn high_sigma_skip_count(state: &BuildingState) -> u64 {
+    state
+        .facts()
+        .filter(|(_, obj)| {
+            matches!(
+                obj.header.object_type,
+                ObjectType::Surface
+                    | ObjectType::Opening
+                    | ObjectType::Equipment
+                    | ObjectType::Run
+            ) && obj
+                .sigma_mm()
+                .map(|s| s > SIGMA_EXCLUDE_MM)
+                .unwrap_or(false)
+        })
+        .count() as u64
+}
+
 /// Realize solids from official state. Read-only.
 pub fn realize(state: &BuildingState) -> Result<Realization> {
     let mut out = Realization::default();

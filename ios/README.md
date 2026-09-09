@@ -57,7 +57,7 @@ In Xcode:
 
 1. **Init** a building (or reopen last — restored automatically after force-quit).
 2. **Start RoomPlan scan** → walk the room → **Stop**.
-3. Ingest + **auto-commit** runs (status shows **facts committed**). The scan is the capture session; the product is Facts in the CAS, not a scan file.
+3. Ingest Facts. With a saved join ticket, the app **pushes** staged Facts (status: facts pushed, pending apply). Without a ticket, local auto-commit remains force-quit safety. **Export store…** is Advanced/debug.
 4. Force-quit → reopen → same building and head.
 5. **Export store…** to AirDrop / share a snapshot to a Mac. The live store is not in Files.app.
 

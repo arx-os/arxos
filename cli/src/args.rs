@@ -86,6 +86,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: EntityCommands,
     },
+    /// Contributor inbox (pending Facts; apply is a controller commit)
+    Inbox {
+        #[command(subcommand)]
+        command: InboxCommands,
+    },
     /// Score contributions under a building head (diagnostic points; not payment-grade)
     Score {
         building_id: String,
@@ -241,6 +246,23 @@ pub enum NetCommands {
         #[arg(long)]
         ticket_only: bool,
     },
+    /// Push staged (or listed) Facts to a peer inbox. Never sets remote head.
+    Push {
+        /// Peer dial ticket (JSON EndpointAddr) or `arx://bldg/...?inbox=`
+        #[arg(long)]
+        peer: Option<String>,
+        /// Locator `arx://bldg/<id>?controllers=...&inbox=<ticket>`
+        #[arg(long)]
+        uri: Option<String>,
+        #[arg(long)]
+        building: String,
+        /// Push this store's staged pending CIDs
+        #[arg(long, default_value_t = false)]
+        staged: bool,
+        /// Explicit leaf CIDs (comma-separated)
+        #[arg(long)]
+        cids: Option<String>,
+    },
     Fetch {
         /// Peer dial ticket (JSON EndpointAddr from `net serve`)
         #[arg(long)]
@@ -294,6 +316,18 @@ pub enum NetCommands {
 pub enum BuildingCommands {
     /// Create a new building repository (CAS + head + device key)
     Init {
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Attach this store to an existing building id without fetching the replica.
+    ///
+    /// Scratch / contributor stores use this so `capture` can tag Facts for
+    /// `net push`. Does not become official history (`head_root` stays unset
+    /// until a controller adopt/apply).
+    Follow {
+        building_id: String,
         #[arg(long)]
         name: Option<String>,
         #[arg(long)]
@@ -407,6 +441,31 @@ pub enum EntityCommands {
         entity_id: String,
         #[arg(long)]
         json: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum InboxCommands {
+    /// List pending contributor Fact CIDs (does not move head)
+    List {
+        building_id: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Controller: stage pending Facts and commit (fuse-on-commit)
+    Apply {
+        building_id: String,
+        /// Restrict to these CIDs (comma-separated). Default: all pending.
+        #[arg(long)]
+        cids: Option<String>,
+        #[arg(long)]
+        quiet: bool,
+    },
+    /// Drop CIDs from the inbox only (CAS bytes remain)
+    Reject {
+        building_id: String,
+        #[arg(long)]
+        cids: String,
     },
 }
 

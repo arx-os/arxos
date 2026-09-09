@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Inbox / thin client
+
+- Meta inbox `$STORE/meta/inbox/<building_id>.json`. Push never sets `head_root`.
+- `arx inbox list|apply|reject`, `arx building follow`, `arx net push --staged`.
+- Additive `arxos/sync/1` messages: `PutObject`, `PushFacts`.
+- Locator `arx://bldg/<id>?controllers=&inbox=`. iOS: join ticket + push staged.
+
 ### Facts / state / realize
 
 - Schema v2: optional `extent`, `sigma_mm`, `support_count`, `evidence` on

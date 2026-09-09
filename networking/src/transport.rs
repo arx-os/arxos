@@ -55,4 +55,21 @@ pub trait ObjectTransport: Send + Sync {
         object_count: u64,
         message: Option<String>,
     ) -> BoxFuture<'a, Result<()>>;
+
+    /// Put canonical object bytes on `peer`. Must not set head.
+    fn put_object<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        cid: &'a str,
+        bytes: &'a [u8],
+    ) -> BoxFuture<'a, Result<crate::protocol::Message>>;
+
+    /// Bind leaf CIDs already on `peer` to a building inbox. Must not set head.
+    fn push_facts<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        building_id: &'a str,
+        leaf_cids: &'a [String],
+        author_hex: &'a str,
+    ) -> BoxFuture<'a, Result<crate::protocol::Message>>;
 }

@@ -46,6 +46,16 @@ These rules are non-negotiable. New code that violates them will be rejected.
 
 `open` / `init` / `open_or_follow` hold `store.lock` exclusively for the handle lifetime (single writer). `open_read` takes no flock: concurrent readers are allowed, and they neither block nor wait for a writer. Object files and `BuildingRecord` are written with temp+rename, so each read is a consistent snapshot of one file; a commit racing a read can still leave the head pointer slightly stale relative to new objects (TOCTOU). Mutating methods on a read handle return `Error::Store`.
 
+### Inbox (push ≠ adopt)
+
+Pending contributor Facts live in **meta**, not a new object type:
+
+```text
+<meta/inbox/<building_id>.json>
+```
+
+`PutObject` / `PushFacts` ingest canonical bytes into the CAS and append leaf CIDs to that file. They **never** call adopt or move `head_root`. `BuildingRepository::inbox_apply` (controller key, exclusive lock) stages those CIDs and `commit`s — the same fuse-on-commit path as capture. `inbox apply` cannot run while `net serve` holds `store.lock`; stop serve first.
+
 ### Allowed `ObjectStore` construction
 
 The concrete filesystem type is for **opening a path**, not for passing around as an API:

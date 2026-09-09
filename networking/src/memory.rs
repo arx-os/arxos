@@ -96,6 +96,10 @@ impl MemoryNode {
             .ok_or_else(|| NetError::PeerNotFound(peer.clone()))?;
         Ok(f(node))
     }
+
+    fn store_path_of(&self, peer: &PeerId) -> Result<std::path::PathBuf> {
+        self.with_peer(peer, |n| n.store.root().to_path_buf())
+    }
 }
 
 impl ObjectTransport for MemoryNode {
@@ -169,6 +173,31 @@ impl ObjectTransport for MemoryNode {
             let _ = (peer, building_id, root_cid, object_count);
             // Advertisements are local-store only (same as Iroh serve).
             Ok(())
+        })
+    }
+
+    fn put_object<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        cid: &'a str,
+        bytes: &'a [u8],
+    ) -> BoxFuture<'a, Result<crate::protocol::Message>> {
+        Box::pin(async move {
+            let path = self.store_path_of(peer)?;
+            crate::sync::serve_put_object(&path, cid, bytes)
+        })
+    }
+
+    fn push_facts<'a>(
+        &'a self,
+        peer: &'a PeerId,
+        building_id: &'a str,
+        leaf_cids: &'a [String],
+        author_hex: &'a str,
+    ) -> BoxFuture<'a, Result<crate::protocol::Message>> {
+        Box::pin(async move {
+            let path = self.store_path_of(peer)?;
+            crate::sync::serve_push_facts(&path, building_id, leaf_cids, author_hex)
         })
     }
 }

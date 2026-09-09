@@ -9,6 +9,8 @@ import ArxosCore
 @MainActor
 final class BuildingSession: ObservableObject {
     private static let lastBuildingKey = "arxos.lastBuildingId"
+    private static let joinTicketKey = "arxos.joinTicket"
+    private static let joinControllersKey = "arxos.joinControllers"
 
     @Published var summary: BuildingSummary?
     @Published var lastCapture: CapturePutResult?
@@ -246,6 +248,21 @@ final class BuildingSession: ObservableObject {
             hasUncommittedStaging = true
             summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
             status = "RoomPlan staged: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects"
+            if let ticket = UserDefaults.standard.string(forKey: Self.joinTicketKey), !ticket.isEmpty {
+                do {
+                    let pushed = try ArxosCore.pushStaged(
+                        storePath: storePath,
+                        buildingId: id,
+                        peerTicket: ticket
+                    )
+                    hasUncommittedStaging = false
+                    status = "Facts pushed, pending apply (accepted \(pushed.accepted))"
+                    refreshNearby()
+                    return
+                } catch {
+                    status = "Push failed: \(error.localizedDescription); falling back to local commit"
+                }
+            }
             if autoCommit {
                 commit(message: "roomplan facts")
             } else {
@@ -254,6 +271,22 @@ final class BuildingSession: ObservableObject {
         } catch {
             report(error)
         }
+    }
+
+    /// Persist a join locator (`arx://…` or raw Iroh ticket). Trust is pinned keys, not IP.
+    func joinBuilding(ticketOrUri: String, controllers: String? = nil) {
+        lastError = nil
+        let raw = ticketOrUri.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.hasPrefix("arx://"), let inboxRange = raw.range(of: "inbox=") {
+            let ticket = String(raw[inboxRange.upperBound...]).split(separator: "&").first.map(String.init) ?? raw
+            UserDefaults.standard.set(ticket, forKey: Self.joinTicketKey)
+        } else {
+            UserDefaults.standard.set(raw, forKey: Self.joinTicketKey)
+        }
+        if let c = controllers, !c.isEmpty {
+            UserDefaults.standard.set(c, forKey: Self.joinControllersKey)
+        }
+        status = "Join ticket saved (push after capture; Export store is Advanced/debug)"
     }
 
     /// Copy the CAS directory to a temporary folder for the share sheet / AirDrop.

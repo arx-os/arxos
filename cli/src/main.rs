@@ -2,6 +2,7 @@
 
 mod args;
 mod commands;
+mod ctl;
 mod util;
 
 use anyhow::Result;

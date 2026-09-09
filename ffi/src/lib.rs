@@ -11,11 +11,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use zeroize::Zeroizing;
 
-use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::cid::Cid;
 use arxos_core::crypto::Keypair;
-use arxos_core::entity::entity_id_of;
-use arxos_core::object::{Aabb, BlobBody, BuildingId, Object, ObjectBody, Pose};
+
+use arxos_core::object::{BlobBody, BuildingId, Object, ObjectBody};
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
@@ -75,6 +74,14 @@ impl From<arxos_networking::NetError> for ArxosError {
 
 uniffi::include_scaffolding!("arxos");
 
+mod capture;
+mod inbox;
+mod locator;
+
+pub use capture::*;
+pub use inbox::*;
+pub use locator::*;
+
 static FFI_DEVICE_SEED: Mutex<Option<Zeroizing<[u8; 32]>>> = Mutex::new(None);
 
 fn ffi_keypair() -> Option<Keypair> {
@@ -82,13 +89,13 @@ fn ffi_keypair() -> Option<Keypair> {
     guard.as_ref().map(|s| Keypair::from_seed(**s))
 }
 
-fn apply_ffi_seed(repo: &mut BuildingRepository) {
+pub(crate) fn apply_ffi_seed(repo: &mut BuildingRepository) {
     if let Some(kp) = ffi_keypair() {
         repo.set_keypair(kp);
     }
 }
 
-fn open_write(
+pub(crate) fn open_write(
     store_path: &str,
     building_id: &BuildingId,
 ) -> Result<BuildingRepository, ArxosError> {
@@ -228,7 +235,7 @@ pub struct RootCreateResult {
     pub object_count: u64,
 }
 
-fn now_secs() -> u64 {
+pub(crate) fn now_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -386,302 +393,7 @@ pub fn list_buildings(store_path: String) -> Result<Vec<FfiBuildingSummary>, Arx
 }
 
 /// Capture put result.
-#[derive(Debug, Clone)]
-pub struct FfiCapturePutResult {
-    pub cid: String,
-    pub object_type: String,
-}
 
-fn pose(x: f64, y: f64, z: f64) -> Pose {
-    Pose {
-        position: [x, y, z],
-        orientation: [0.0, 0.0, 0.0, 1.0],
-    }
-}
-
-/// Capture a space at a world pose.
-/// Capture a space at a world pose.
-///
-/// `entity_id`: pass an existing id to create a replacement version of the
-/// same room (commit/merge will collapse). `None` mints a new [`arxos_core::EntityId`]
-/// and will **not** collapse with prior rooms.
-pub fn capture_space(
-    store_path: String,
-    building_id: String,
-    name: Option<String>,
-    x: f64,
-    y: f64,
-    z: f64,
-    entity_id: Option<String>,
-) -> Result<FfiCapturePutResult, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let entity_id = match entity_id {
-        Some(s) if !s.is_empty() => {
-            Some(
-                arxos_core::EntityId::from_str(&s).map_err(|e| ArxosError::InvalidInput {
-                    message: e.to_string(),
-                })?,
-            )
-        }
-        _ => None,
-    };
-    let mut repo = open_write(&store_path, &bid)?;
-    let res = repo.capture_space(&SpaceCapture {
-        entity_id,
-        name,
-        pose: pose(x, y, z),
-        bounds: None,
-        floor: None,
-        properties: BTreeMap::new(),
-    })?;
-    Ok(FfiCapturePutResult {
-        cid: res.cid.to_string(),
-        object_type: res.object_type.to_string(),
-    })
-}
-
-/// Capture a text annotation at a world pose.
-pub fn capture_annotation(
-    store_path: String,
-    building_id: String,
-    text: String,
-    x: f64,
-    y: f64,
-    z: f64,
-) -> Result<FfiCapturePutResult, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let mut repo = open_write(&store_path, &bid)?;
-    let res = repo.capture_annotation(&AnnotationCapture::new(text, pose(x, y, z)))?;
-    Ok(FfiCapturePutResult {
-        cid: res.cid.to_string(),
-        object_type: res.object_type.to_string(),
-    })
-}
-
-/// Capture a packed XYZ f32 little-endian point cloud.
-pub fn capture_point_cloud(
-    store_path: String,
-    building_id: String,
-    points_xyz_f32_le: Vec<u8>,
-    x: f64,
-    y: f64,
-    z: f64,
-) -> Result<FfiCapturePutResult, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let mut repo = open_write(&store_path, &bid)?;
-    let mut properties = BTreeMap::new();
-    properties.insert("format".into(), "xyz_f32_le".into());
-    properties.insert("source".into(), "device".into());
-    let res = repo.capture_point_cloud(&PointCloudCapture {
-        pose: pose(x, y, z),
-        bounds: None,
-        points_xyz_f32_le,
-        properties,
-    })?;
-    Ok(FfiCapturePutResult {
-        cid: res.cid.to_string(),
-        object_type: res.object_type.to_string(),
-    })
-}
-
-/// Commit staged captures to a new root.
-#[derive(Debug, Clone)]
-pub struct FfiCommitSummary {
-    pub root_cid: String,
-    pub building_id: String,
-    pub object_count: u64,
-    pub previous_root: Option<String>,
-}
-
-/// Commit building working set to a new signed root.
-pub fn commit_building(
-    store_path: String,
-    building_id: String,
-    message: Option<String>,
-) -> Result<FfiCommitSummary, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let mut repo = open_write(&store_path, &bid)?;
-    let res = repo.commit(message)?;
-    Ok(FfiCommitSummary {
-        root_cid: res.root_cid.to_string(),
-        building_id: res.building_id.to_string(),
-        object_count: res.object_count,
-        previous_root: res.previous_root.map(|c| c.to_string()),
-    })
-}
-
-/// Annotation overlay data for AR.
-#[derive(Debug, Clone)]
-pub struct FfiAnnotationOverlay {
-    pub cid: String,
-    pub text: String,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-    pub distance_m: f64,
-}
-
-/// Query annotations near a pose.
-pub fn annotations_near(
-    store_path: String,
-    building_id: String,
-    x: f64,
-    y: f64,
-    z: f64,
-    radius_m: f64,
-) -> Result<Vec<FfiAnnotationOverlay>, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let mut repo = BuildingRepository::open_read(&store_path, &bid)?;
-    let hits = repo.annotations_near(&pose(x, y, z), radius_m)?;
-    Ok(hits
-        .into_iter()
-        .map(|h| FfiAnnotationOverlay {
-            cid: h.cid.to_string(),
-            text: h.text,
-            x: h.pose.position[0],
-            y: h.pose.position[1],
-            z: h.pose.position[2],
-            distance_m: h.distance_m,
-        })
-        .collect())
-}
-
-// ─── Mobile production surface ───
-
-#[derive(Debug, Clone)]
-pub struct FfiRoomPlanSurface {
-    pub id: String,
-    pub category: String,
-    pub transform: Vec<f64>,
-    pub dimensions: Vec<f64>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FfiRoomPlanObject {
-    pub id: String,
-    pub category: String,
-    pub transform: Vec<f64>,
-    pub dimensions: Vec<f64>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RoomPlanGeometry {
-    pub surfaces: Vec<FfiRoomPlanSurface>,
-    pub objects: Vec<FfiRoomPlanObject>,
-}
-
-#[derive(Debug, Clone)]
-pub struct IngestResult {
-    pub space_cid: String,
-    pub surface_cids: Vec<String>,
-    pub object_cids: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct StringKeyValuePair {
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct SpatialQueryResult {
-    pub cid: String,
-    pub object_type: String,
-    pub name: Option<String>,
-    pub pose_x: f64,
-    pub pose_y: f64,
-    pub pose_z: f64,
-    pub properties: Vec<StringKeyValuePair>,
-}
-
-#[derive(Debug, Clone)]
-pub struct MergeSummary {
-    pub root_cid: String,
-    pub object_count: u64,
-    pub kept: u64,
-    pub deduped_annotations: u64,
-    pub spatial_index_root: Option<String>,
-    pub parent_a: String,
-    pub parent_b: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct PullResultSummary {
-    pub root_cid: String,
-    pub objects_stored: u64,
-    pub objects_skipped: u64,
-    pub adopted_root: Option<String>,
-}
-
-fn pose_from_transform(transform: &[f64]) -> Result<Pose, ArxosError> {
-    arxos_core::capture::pose_from_column_major_matrix(transform).map_err(Into::into)
-}
-
-fn world_aabb_from_transform_and_dimensions(
-    transform: &[f64],
-    dimensions: &[f64],
-) -> Result<Aabb, ArxosError> {
-    arxos_core::capture::world_aabb_from_transform_and_dimensions(transform, dimensions)
-        .map_err(Into::into)
-}
-
-/// Ingest RoomPlan structured surfaces and objects as Facts, and stage.
-///
-/// Mapping lives in `arxos_core::capture::roomplan`. Doors/windows become
-/// Openings hosted on the nearest wall. Apple UUIDs become stable EntityIds.
-pub fn ingest_room_plan(
-    store_path: String,
-    building_id: String,
-    geometry: RoomPlanGeometry,
-) -> Result<IngestResult, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let mut repo = open_write(&store_path, &bid)?;
-    let core_geom = arxos_core::capture::roomplan::RoomPlanGeometry {
-        surfaces: geometry
-            .surfaces
-            .into_iter()
-            .map(|s| arxos_core::capture::roomplan::RoomPlanSurface {
-                id: s.id,
-                category: s.category,
-                transform: s.transform,
-                dimensions: s.dimensions,
-            })
-            .collect(),
-        objects: geometry
-            .objects
-            .into_iter()
-            .map(|o| arxos_core::capture::roomplan::RoomPlanObject {
-                id: o.id,
-                category: o.category,
-                transform: o.transform,
-                dimensions: o.dimensions,
-            })
-            .collect(),
-    };
-    let staged = repo.ingest_room_plan(&core_geom)?;
-    let mut surface_cids: Vec<String> = staged.surfaces.iter().map(|c| c.to_string()).collect();
-    surface_cids.extend(staged.openings.iter().map(|c| c.to_string()));
-    let object_cids: Vec<String> = staged.equipment.iter().map(|c| c.to_string()).collect();
-    Ok(IngestResult {
-        space_cid: staged.space.to_string(),
-        surface_cids,
-        object_cids,
-    })
-}
-
-/// Query spatial volume for indexed objects.
 pub fn query_spatial_volume(
     store_path: String,
     building_id: String,
@@ -827,100 +539,6 @@ pub fn pull_remote_root(
     })
 }
 
-#[derive(Debug, Clone)]
-pub struct FfiBuildingLocator {
-    pub building_id: String,
-    pub controllers: Vec<String>,
-    pub inbox: Option<String>,
-}
-
-/// Parse `arx://bldg/<id>?controllers=&inbox=`.
-pub fn parse_building_locator(uri: String) -> Result<FfiBuildingLocator, ArxosError> {
-    let loc = arxos_core::BuildingLocator::parse(&uri).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    Ok(FfiBuildingLocator {
-        building_id: loc.building_id.to_string(),
-        controllers: loc.controllers.iter().map(|k| k.to_string()).collect(),
-        inbox: loc.inbox,
-    })
-}
-
-/// Push staged Facts to a peer inbox. Never sets remote head.
-#[derive(Debug, Clone)]
-pub struct FfiPushSummary {
-    pub building_id: String,
-    pub accepted: u64,
-    pub duplicate: u64,
-    pub rejected: u64,
-}
-
-pub fn push_staged(
-    store_path: String,
-    building_id: String,
-    peer_ticket: String,
-) -> Result<FfiPushSummary, ArxosError> {
-    let bid = BuildingId::from_str(&building_id).map_err(|e| ArxosError::InvalidInput {
-        message: e.to_string(),
-    })?;
-    let repo = BuildingRepository::open_read(&store_path, &bid)?;
-    let pending: Vec<_> = repo.record().pending.iter().copied().collect();
-    if pending.is_empty() {
-        return Err(ArxosError::Validation {
-            message: "no staged facts to push".into(),
-        });
-    }
-    let mut objects = Vec::new();
-    let mut seen = BTreeSet::new();
-    let mut leaves = Vec::new();
-    for cid in &pending {
-        leaves.push(cid.to_string());
-        if let Ok(obj) = repo.get_object(cid) {
-            for dep in arxos_core::repository::referenced_cids(&obj) {
-                if seen.insert(dep) {
-                    if let Ok(b) = repo.get_object_bytes(&dep) {
-                        objects.push((dep.to_string(), b));
-                    }
-                }
-            }
-        }
-        if seen.insert(*cid) {
-            objects.push((cid.to_string(), repo.get_object_bytes(cid)?));
-        }
-    }
-    let author = repo
-        .keypair()
-        .map(|k| k.public_key().to_string())
-        .unwrap_or_default();
-    drop(repo);
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| ArxosError::Internal {
-            message: format!("tokio runtime: {e}"),
-        })?;
-    rt.block_on(async move {
-        let node = arxos_networking::IrohNode::bind(std::path::Path::new(&store_path)).await?;
-        let result = arxos_networking::sync::push_facts(
-            &node,
-            &peer_ticket,
-            &building_id,
-            &objects,
-            &leaves,
-            &author,
-        )
-        .await?;
-        node.close().await;
-        Ok(FfiPushSummary {
-            building_id: result.building_id,
-            accepted: result.accepted.len() as u64,
-            duplicate: result.duplicate.len() as u64,
-            rejected: result.rejected.len() as u64,
-        })
-    })
-}
-
 /// Export to USD file.
 pub fn export_usd(
     store_path: String,
@@ -961,9 +579,22 @@ pub fn export_ifc(
     Ok(())
 }
 
+fn pose_from_transform(transform: &[f64]) -> Result<arxos_core::object::Pose, ArxosError> {
+    arxos_core::capture::pose_from_column_major_matrix(transform).map_err(Into::into)
+}
+
+fn world_aabb_from_transform_and_dimensions(
+    transform: &[f64],
+    dimensions: &[f64],
+) -> Result<arxos_core::object::Aabb, ArxosError> {
+    arxos_core::capture::world_aabb_from_transform_and_dimensions(transform, dimensions)
+        .map_err(Into::into)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arxos_core::entity::entity_id_of;
     use tempfile::tempdir;
 
     #[test]
@@ -1081,9 +712,6 @@ mod tests {
             .unwrap();
         assert_eq!(entity_id_of(&wall1), entity_id_of(&wall2));
         assert_eq!(entity_id_of(&chair1), entity_id_of(&chair2));
-        assert_eq!(
-            entity_id_of(&wall1).map(|e| e.as_str()),
-            Some("rp:wall-1")
-        );
+        assert_eq!(entity_id_of(&wall1).map(|e| e.as_str()), Some("rp:wall-1"));
     }
 }

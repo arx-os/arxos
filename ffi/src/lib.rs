@@ -11,12 +11,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use zeroize::Zeroizing;
 
-use arxos_core::capture::{maybe_sign, AnnotationCapture, PointCloudCapture, SpaceCapture};
+use arxos_core::capture::{AnnotationCapture, PointCloudCapture, SpaceCapture};
 use arxos_core::cid::Cid;
 use arxos_core::crypto::Keypair;
-use arxos_core::object::{
-    Aabb, BlobBody, BuildingId, EquipmentBody, Object, ObjectBody, Pose, SpaceBody, SurfaceBody,
-};
+use arxos_core::entity::entity_id_of;
+use arxos_core::object::{Aabb, BlobBody, BuildingId, Object, ObjectBody, Pose};
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{RootBody, RootBuilder};
 use arxos_core::store::ObjectStore;
@@ -636,31 +635,10 @@ fn world_aabb_from_transform_and_dimensions(
         .map_err(Into::into)
 }
 
-/// Stable entity id from a RoomPlan surface/object identifier.
-fn roomplan_entity_id(kind: &str, rp_id: &str) -> arxos_core::EntityId {
-    if rp_id.is_empty() {
-        arxos_core::EntityId::new()
-    } else {
-        arxos_core::EntityId::from(format!("rp:{kind}:{rp_id}"))
-    }
-}
-
-/// Deterministic space entity id from the set of RoomPlan identifiers.
-fn roomplan_space_entity_id(geometry: &RoomPlanGeometry) -> arxos_core::EntityId {
-    let mut parts: Vec<&str> = geometry
-        .surfaces
-        .iter()
-        .map(|s| s.id.as_str())
-        .chain(geometry.objects.iter().map(|o| o.id.as_str()))
-        .collect();
-    parts.sort_unstable();
-    let material = parts.join("|");
-    let digest = blake3::hash(material.as_bytes());
-    let hex = hex::encode(&digest.as_bytes()[..16]);
-    arxos_core::EntityId::from(format!("rp:space:{hex}"))
-}
-
-/// Ingest RoomPlan structured surfaces and objects, group into a Space, and stage.
+/// Ingest RoomPlan structured surfaces and objects as Facts, and stage.
+///
+/// Mapping lives in `arxos_core::capture::roomplan`. Doors/windows become
+/// Openings hosted on the nearest wall. Apple UUIDs become stable EntityIds.
 pub fn ingest_room_plan(
     store_path: String,
     building_id: String,
@@ -670,136 +648,34 @@ pub fn ingest_room_plan(
         message: e.to_string(),
     })?;
     let mut repo = open_write(&store_path, &bid)?;
-    // Owned copy so we can sign while mutably staging (no Keypair: Clone).
-    let kp_owned = repo.keypair().map(|k| Keypair::from_seed(*k.seed()));
-    let kp = kp_owned.as_ref();
-
-    let mut surface_objs = Vec::new();
-    let mut object_objs = Vec::new();
-    let mut room_bounds: Option<Aabb> = None;
-
-    for s in &geometry.surfaces {
-        let pose = pose_from_transform(&s.transform)?;
-        let bounds = world_aabb_from_transform_and_dimensions(&s.transform, &s.dimensions)?;
-
-        if let Some(ref mut rb) = room_bounds {
-            rb.min[0] = rb.min[0].min(bounds.min[0]);
-            rb.min[1] = rb.min[1].min(bounds.min[1]);
-            rb.min[2] = rb.min[2].min(bounds.min[2]);
-            rb.max[0] = rb.max[0].max(bounds.max[0]);
-            rb.max[1] = rb.max[1].max(bounds.max[1]);
-            rb.max[2] = rb.max[2].max(bounds.max[2]);
-        } else {
-            room_bounds = Some(bounds.clone());
-        }
-
-        let mut properties = BTreeMap::new();
-        properties.insert("identifier".into(), s.id.clone());
-        properties.insert("source".into(), "roomplan".into());
-        properties.insert(
-            "width".into(),
-            s.dimensions.first().cloned().unwrap_or(0.0).to_string(),
-        );
-        properties.insert(
-            "height".into(),
-            s.dimensions.get(1).cloned().unwrap_or(0.0).to_string(),
-        );
-        properties.insert(
-            "depth".into(),
-            s.dimensions.get(2).cloned().unwrap_or(0.0).to_string(),
-        );
-
-        surface_objs.push((s.id.clone(), s.category.clone(), pose, bounds, properties));
-    }
-
-    for o in &geometry.objects {
-        let pose = pose_from_transform(&o.transform)?;
-        let bounds = world_aabb_from_transform_and_dimensions(&o.transform, &o.dimensions)?;
-
-        if let Some(ref mut rb) = room_bounds {
-            rb.min[0] = rb.min[0].min(bounds.min[0]);
-            rb.min[1] = rb.min[1].min(bounds.min[1]);
-            rb.min[2] = rb.min[2].min(bounds.min[2]);
-            rb.max[0] = rb.max[0].max(bounds.max[0]);
-            rb.max[1] = rb.max[1].max(bounds.max[1]);
-            rb.max[2] = rb.max[2].max(bounds.max[2]);
-        } else {
-            room_bounds = Some(bounds);
-        }
-
-        let mut properties = BTreeMap::new();
-        properties.insert("identifier".into(), o.id.clone());
-        properties.insert("source".into(), "roomplan".into());
-
-        object_objs.push((o.id.clone(), o.category.clone(), pose, properties));
-    }
-
-    let space_pose = if let Some(ref rb) = room_bounds {
-        Pose {
-            position: [
-                (rb.min[0] + rb.max[0]) / 2.0,
-                (rb.min[1] + rb.max[1]) / 2.0,
-                (rb.min[2] + rb.max[2]) / 2.0,
-            ],
-            orientation: [0.0, 0.0, 0.0, 1.0],
-        }
-    } else {
-        Pose::default()
+    let core_geom = arxos_core::capture::roomplan::RoomPlanGeometry {
+        surfaces: geometry
+            .surfaces
+            .into_iter()
+            .map(|s| arxos_core::capture::roomplan::RoomPlanSurface {
+                id: s.id,
+                category: s.category,
+                transform: s.transform,
+                dimensions: s.dimensions,
+            })
+            .collect(),
+        objects: geometry
+            .objects
+            .into_iter()
+            .map(|o| arxos_core::capture::roomplan::RoomPlanObject {
+                id: o.id,
+                category: o.category,
+                transform: o.transform,
+                dimensions: o.dimensions,
+            })
+            .collect(),
     };
-
-    // Stable entity ids from RoomPlan identifiers so rescans of the same
-    // geometry produce the same CIDs when created timestamps are fixed.
-    let space_entity = roomplan_space_entity_id(&geometry);
-
-    let mut space_props = BTreeMap::new();
-    space_props.insert("source".into(), "roomplan".into());
-    let space_body = SpaceBody {
-        entity_id: Some(space_entity),
-        name: Some("RoomPlan Room".into()),
-        floor: None,
-        pose: Some(space_pose),
-        bounds: room_bounds,
-        properties: space_props,
-    };
-    let space_object = Object::new_with_created(ObjectBody::Space(space_body), 0);
-    let signed_space = maybe_sign(space_object, kp)?;
-    let space_cid = repo.stage_captured_object(signed_space)?.cid;
-
-    let mut surface_cids = Vec::new();
-    for (rp_id, category, pose, bounds, properties) in surface_objs {
-        let surface_body = SurfaceBody {
-            entity_id: Some(roomplan_entity_id("surface", &rp_id)),
-            space: Some(space_cid),
-            pose: Some(pose),
-            bounds: Some(bounds),
-            surface_kind: Some(category),
-            properties,
-        };
-        let surface_object = Object::new_with_created(ObjectBody::Surface(surface_body), 0);
-        let signed_surface = maybe_sign(surface_object, kp)?;
-        let cid = repo.stage_captured_object(signed_surface)?.cid;
-        surface_cids.push(cid.to_string());
-    }
-
-    let mut object_cids = Vec::new();
-    for (rp_id, category, pose, mut properties) in object_objs {
-        properties.insert("space".into(), space_cid.to_string());
-        let equipment_body = EquipmentBody {
-            entity_id: Some(roomplan_entity_id("equipment", &rp_id)),
-            name: Some(category.clone()),
-            equipment_kind: Some(category),
-            pose: Some(pose),
-            system: None,
-            properties,
-        };
-        let equipment_object = Object::new_with_created(ObjectBody::Equipment(equipment_body), 0);
-        let signed_equipment = maybe_sign(equipment_object, kp)?;
-        let cid = repo.stage_captured_object(signed_equipment)?.cid;
-        object_cids.push(cid.to_string());
-    }
-
+    let staged = repo.ingest_room_plan(&core_geom)?;
+    let mut surface_cids: Vec<String> = staged.surfaces.iter().map(|c| c.to_string()).collect();
+    surface_cids.extend(staged.openings.iter().map(|c| c.to_string()));
+    let object_cids: Vec<String> = staged.equipment.iter().map(|c| c.to_string()).collect();
     Ok(IngestResult {
-        space_cid: space_cid.to_string(),
+        space_cid: staged.space.to_string(),
         surface_cids,
         object_cids,
     })
@@ -1095,8 +971,25 @@ mod tests {
         assert_eq!(query_res.len(), 3);
 
         let res2 = ingest_room_plan(path.clone(), bid.clone(), geom1).unwrap();
-        assert_eq!(res1.space_cid, res2.space_cid);
-        assert_eq!(res1.surface_cids[0], res2.surface_cids[0]);
-        assert_eq!(res1.object_cids[0], res2.object_cids[0]);
+        let bid_parsed = BuildingId::from_str(&bid).unwrap();
+        let repo = BuildingRepository::open_read(&path, &bid_parsed).unwrap();
+        let wall1 = repo
+            .get_object(&Cid::from_str(&res1.surface_cids[0]).unwrap())
+            .unwrap();
+        let wall2 = repo
+            .get_object(&Cid::from_str(&res2.surface_cids[0]).unwrap())
+            .unwrap();
+        let chair1 = repo
+            .get_object(&Cid::from_str(&res1.object_cids[0]).unwrap())
+            .unwrap();
+        let chair2 = repo
+            .get_object(&Cid::from_str(&res2.object_cids[0]).unwrap())
+            .unwrap();
+        assert_eq!(entity_id_of(&wall1), entity_id_of(&wall2));
+        assert_eq!(entity_id_of(&chair1), entity_id_of(&chair2));
+        assert_eq!(
+            entity_id_of(&wall1).map(|e| e.as_str()),
+            Some("rp:wall-1")
+        );
     }
 }

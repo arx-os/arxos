@@ -171,7 +171,7 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                 }
 
                 await MainActor.run {
-                    // Auto-commits so force-quit cannot lose the scan.
+                    // Auto-commits so force-quit cannot lose committed facts.
                     self.session.ingestRoomPlan(
                         surfaces: surfaces,
                         objects: objects,

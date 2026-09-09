@@ -94,3 +94,46 @@ fn usd_roundtrip_identity() {
     assert!(usda2.contains("arxos:buildingId"));
     assert!(usda2.contains(bid.as_str()));
 }
+
+#[test]
+fn usd_wall_prim_for_entity() {
+    use arxos_core::entity::EntityId;
+    use arxos_core::object::{Object, ObjectBody, SurfaceBody};
+
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let kp = Keypair::generate();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("USD Wall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
+    let bid = repo.building_id().clone();
+    let eid = EntityId::from("rp:wall-usd-1".to_string());
+    repo.stage_captured_object(Object::new_with_created(
+        ObjectBody::Surface(SurfaceBody {
+            entity_id: Some(eid.clone()),
+            pose: Some(Pose {
+                position: [2.0, 1.25, 0.0],
+                orientation: [0.0, 0.0, 0.0, 1.0],
+            }),
+            surface_kind: Some("wall".into()),
+            extent: Some([4.0, 2.5, 0.15]),
+            sigma_mm: Some(40.0),
+            support_count: 1,
+            ..Default::default()
+        }),
+        1,
+    ))
+    .unwrap();
+    repo.commit(Some("wall".into())).unwrap();
+    drop(repo);
+
+    let usda = export_building_usda(path, &bid, &ExportOptions::default()).unwrap();
+    assert!(usda.contains("def Cube"), "expected Cube prim:\n{usda}");
+    assert!(
+        usda.contains("rp:wall-usd-1") || usda.contains("wall_usd_1") || usda.contains("arxos:entityId"),
+        "expected wall entity on prim:\n{usda}"
+    );
+}

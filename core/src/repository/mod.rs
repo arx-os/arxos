@@ -422,6 +422,66 @@ impl BuildingRepository {
         self.put_staged(obj)
     }
 
+    /// Ingest RoomPlan geometry as Facts, stage them, and return CIDs.
+    ///
+    /// Surfaces that RoomPlan labels door/window/opening become [`Opening`]
+    /// Facts hosted on the nearest wall. Apple UUIDs become stable
+    /// [`crate::entity::EntityId`]s (`rp:` + lowercase uuid).
+    pub fn ingest_room_plan(
+        &mut self,
+        geometry: &crate::capture::roomplan::RoomPlanGeometry,
+    ) -> Result<crate::capture::roomplan::MappedRoomPlanCids> {
+        let created = now_secs();
+        let mapped = crate::capture::roomplan::map_roomplan(geometry, created)?;
+        self.ingest_mapped_roomplan(mapped)
+    }
+
+    /// Stage an already-mapped RoomPlan batch (Facts, not scans).
+    pub fn ingest_mapped_roomplan(
+        &mut self,
+        mapped: crate::capture::roomplan::MappedRoomPlan,
+    ) -> Result<crate::capture::roomplan::MappedRoomPlanCids> {
+        self.require_write()?;
+        // Keypair is not Clone; copy seed so we can sign while mutably staging.
+        let kp_owned = self.keypair.as_ref().map(|k| Keypair::from_seed(*k.seed()));
+        let kp = kp_owned.as_ref();
+
+        let space = maybe_sign(mapped.space, kp)?;
+        let space_res = self.put_staged(space)?;
+
+        let mut surfaces = Vec::new();
+        for mut obj in mapped.surfaces {
+            if let ObjectBody::Surface(ref mut b) = obj.body {
+                b.space = Some(space_res.cid);
+            }
+            let signed = maybe_sign(obj, kp)?;
+            surfaces.push(self.put_staged(signed)?.cid);
+        }
+
+        let mut openings = Vec::new();
+        for obj in mapped.openings {
+            let signed = maybe_sign(obj, kp)?;
+            openings.push(self.put_staged(signed)?.cid);
+        }
+
+        let mut equipment = Vec::new();
+        for mut obj in mapped.equipment {
+            if let ObjectBody::Equipment(ref mut b) = obj.body {
+                b.properties
+                    .insert("space".into(), space_res.cid.to_string());
+            }
+            let signed = maybe_sign(obj, kp)?;
+            equipment.push(self.put_staged(signed)?.cid);
+        }
+
+        Ok(crate::capture::roomplan::MappedRoomPlanCids {
+            space: space_res.cid,
+            surfaces,
+            openings,
+            equipment,
+        })
+    }
+
     /// Put and stage any captured object directly into the repository.
     pub fn stage_captured_object(&mut self, obj: Object) -> Result<CaptureResult> {
         self.put_staged(obj)

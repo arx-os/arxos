@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use crate::entity::collapse_active_set_preferring;
 use crate::error::{Error, Result};
+use crate::fuse::fuse_active_set;
 use crate::root::{RootBody, RootBuilder};
 
 use super::{now_secs, BuildingRepository, CommitResult};
@@ -45,8 +46,10 @@ impl BuildingRepository {
             proposed.remove(r);
         }
 
-        // 2. Entity collapse: one version per EntityId (prefer staged on ties).
-        let collapsed = collapse_active_set_preferring(&self.store, &proposed, &staged)?;
+        // 2. Geometric fuse: same EntityId → one fused body (put, never mutate).
+        //    Then collapse as last-stage uniqueness (prefer fused/staged on ties).
+        let fused = fuse_active_set(&self.store, &proposed, self.keypair.as_ref())?;
+        let collapsed = collapse_active_set_preferring(&self.store, &fused, &staged)?;
         let new_active = collapsed.kept;
 
         if new_active.is_empty() {

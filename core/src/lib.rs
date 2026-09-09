@@ -24,8 +24,11 @@ pub mod cid;
 pub mod crypto;
 pub mod entity;
 pub mod error;
+pub mod fuse;
 pub mod merge;
 pub mod object;
+pub mod realize;
+pub mod state;
 pub mod repository;
 pub mod root;
 pub mod schema;
@@ -47,6 +50,11 @@ pub use capture::{
     space_object, world_aabb_from_transform_and_dimensions, AnnotationCapture, MeshCapture,
     PointCloudCapture, SpaceCapture,
 };
+pub use capture::roomplan::{
+    entity_id_from_roomplan_uuid, hall_four_walls, map_roomplan, space_entity_id_from_surface_ids,
+    MappedRoomPlan, RoomPlanGeometry, RoomPlanObject, RoomPlanSurface, ROOMPLAN_EQUIPMENT_SIGMA_MM,
+    ROOMPLAN_SURFACE_SIGMA_MM,
+};
 pub use cid::Cid;
 pub use crypto::{
     read_secret_32, write_secret_bytes, AuthorSignature, Keypair, PublicKey, Signature,
@@ -55,6 +63,9 @@ pub use entity::{
     collapse_active_set, collapse_active_set_preferring, entity_id_of, find_entity_versions,
     CollapseResult, EntityId,
 };
+pub use fuse::{fuse, fuse_active_set};
+pub use realize::{ascii_slice, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM};
+pub use state::BuildingState;
 pub use scoring::{
     attribute_object, score_cids, score_cids_with_policy, score_contributions,
     score_contributions_with_policy, score_root, score_root_with_policy, Contribution,
@@ -66,8 +77,9 @@ pub use merge::{
     MergePlan, MergeReplica, MergeResult, ANNOTATION_DEDUP_M,
 };
 pub use object::{
-    AnnotationBody, BlobBody, BuildingBody, BuildingId, FloorBody, Object, ObjectBody,
-    ObjectHeader, ObjectType, Pose, SCHEMA_VERSION,
+    AnnotationBody, BlobBody, BuildingBody, BuildingId, EquipmentBody, FloorBody, Object,
+    ObjectBody, ObjectHeader, ObjectType, OpeningBody, Pose, RunBody, SurfaceBody, SCHEMA_VERSION,
+    MIN_SCHEMA_VERSION,
 };
 pub use object::Aabb;
 pub use repository::{

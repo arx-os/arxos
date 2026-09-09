@@ -77,6 +77,7 @@ pub fn entity_id_of(obj: &Object) -> Option<&EntityId> {
         ObjectBody::Surface(b) => b.entity_id.as_ref(),
         ObjectBody::Opening(b) => b.entity_id.as_ref(),
         ObjectBody::Equipment(b) => b.entity_id.as_ref(),
+        ObjectBody::Run(b) => b.entity_id.as_ref(),
         ObjectBody::System(b) => b.entity_id.as_ref(),
         ObjectBody::Circuit(b) => b.entity_id.as_ref(),
         ObjectBody::Sensor(b) => b.entity_id.as_ref(),
@@ -94,6 +95,7 @@ pub fn is_entity_typed(obj: &Object) -> bool {
             | ObjectBody::Surface(_)
             | ObjectBody::Opening(_)
             | ObjectBody::Equipment(_)
+            | ObjectBody::Run(_)
             | ObjectBody::System(_)
             | ObjectBody::Circuit(_)
             | ObjectBody::Sensor(_)

@@ -4,10 +4,12 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use arxos_core::object::{Object, ObjectBody, ObjectType, Pose};
+use arxos_core::realize::{realize, Solid, SolidKind};
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{ClosureOptions, RootBody, RootClosure};
+use arxos_core::state::BuildingState;
 use arxos_core::store::{ObjectRead, ObjectStore};
-use arxos_core::{BuildingId, Cid};
+use arxos_core::{BuildingId, Cid, EntityId};
 
 use crate::error::{IfcError, Result};
 use crate::global_id::global_id_from_cid;
@@ -360,6 +362,19 @@ fn write_ifc<R: ObjectRead + ?Sized>(
         ));
     }
 
+    let state = BuildingState::from_root(store, root)?;
+    let realization = realize(&state)?;
+    emit_realized_solids(
+        &mut w,
+        owner,
+        world,
+        ctx,
+        default_storey,
+        &root.building_id,
+        &realization.solids,
+        &state,
+    );
+
     let desc = format!(
         "arxos_root={} arxos_building={}",
         root_cid, root.building_id
@@ -383,6 +398,197 @@ fn placement_for_pose(
         "IFCAXIS2PLACEMENT3D(#{pt},#{axis_z},#{axis_x})"
     ));
     w.emit(&format!("IFCLOCALPLACEMENT(#{parent_place},#{axis})"))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_realized_solids(
+    w: &mut Writer,
+    owner: u64,
+    world: u64,
+    ctx: u64,
+    storey: u64,
+    building_id: &BuildingId,
+    solids: &[Solid],
+    state: &BuildingState,
+) {
+    let mut wall_ids: BTreeMap<EntityId, u64> = BTreeMap::new();
+    let mut element_ids: Vec<u64> = Vec::new();
+    let mut openings: Vec<(&Solid, u64)> = Vec::new();
+
+    for solid in solids {
+        let (ifc_type, obj_ty) = match solid.kind {
+            SolidKind::Wall => ("IFCWALL", "surface"),
+            SolidKind::Slab => ("IFCSLAB", "surface"),
+            SolidKind::Opening => match state
+                .get(&solid.entity_id)
+                .and_then(|o| match &o.body {
+                    ObjectBody::Opening(b) => b.opening_kind.as_deref(),
+                    _ => None,
+                }) {
+                Some("window") => ("IFCWINDOW", "opening"),
+                Some("door") => ("IFCDOOR", "opening"),
+                _ => ("IFCOPENINGELEMENT", "opening"),
+            },
+            SolidKind::Equipment => ("IFCBUILDINGELEMENTPROXY", "equipment"),
+            SolidKind::Run => ("IFCFLOWSEGMENT", "run"),
+        };
+        let loc = placement_from_solid(w, world, solid);
+        let body_shape = extruded_box_shape(w, ctx, solid);
+        let gid = global_id_from_cid(&solid.cid);
+        let name = ifc_str(solid.entity_id.as_str());
+        let elem = w.emit(&format!(
+            "{ifc_type}({},#{owner},{name},$,$,#{loc},#{body_shape},$)",
+            ifc_str(&gid),
+        ));
+        emit_identity_pset(
+            w,
+            owner,
+            elem,
+            &solid.cid,
+            obj_ty,
+            building_id,
+            Some(solid.entity_id.as_str()),
+        );
+        emit_measure_pset(w, owner, elem, &solid.cid, state.get(&solid.entity_id), solid);
+        match solid.kind {
+            SolidKind::Wall | SolidKind::Slab => {
+                wall_ids.insert(solid.entity_id.clone(), elem);
+                element_ids.push(elem);
+            }
+            SolidKind::Opening => {
+                openings.push((solid, elem));
+            }
+            _ => element_ids.push(elem),
+        }
+    }
+
+    for (solid, opening_id) in &openings {
+        if let Some(host) = &solid.host {
+            if let Some(host_id) = wall_ids.get(host) {
+                w.emit(&format!(
+                    "IFCRELVOIDSELEMENT({},#{owner},$,$,#{host_id},#{opening_id})",
+                    ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
+                        format!("rel:voids:{}", solid.cid).as_bytes()
+                    )))
+                ));
+            }
+        }
+        element_ids.push(*opening_id);
+    }
+
+    if !element_ids.is_empty() {
+        let refs = element_ids
+            .iter()
+            .map(|id| format!("#{id}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        w.emit(&format!(
+            "IFCRELCONTAINEDINSPATIALSTRUCTURE({},#{owner},$,$,({refs}),#{storey})",
+            ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
+                b"rel:storey-solids"
+            )))
+        ));
+    }
+}
+
+fn placement_from_solid(w: &mut Writer, parent: u64, solid: &Solid) -> u64 {
+    let p = solid.pose.position;
+    let x = solid.pose.local_x();
+    let y = solid.pose.local_y();
+    let pt = w.emit(&format!(
+        "IFCCARTESIANPOINT(({},{},{}))",
+        p[0], p[1], p[2]
+    ));
+    let axis = w.emit(&format!(
+        "IFCDIRECTION(({},{},{}))",
+        y[0], y[1], y[2]
+    ));
+    let refd = w.emit(&format!(
+        "IFCDIRECTION(({},{},{}))",
+        x[0], x[1], x[2]
+    ));
+    let place = w.emit(&format!(
+        "IFCAXIS2PLACEMENT3D(#{pt},#{axis},#{refd})"
+    ));
+    w.emit(&format!("IFCLOCALPLACEMENT(#{parent},#{place})"))
+}
+
+fn extruded_box_shape(w: &mut Writer, ctx: u64, solid: &Solid) -> u64 {
+    let [width, height, thick] = solid.extent;
+    let origin2 = w.emit("IFCCARTESIANPOINT((0.,0.))");
+    let dir2 = w.emit("IFCDIRECTION((1.,0.))");
+    let p2 = w.emit(&format!("IFCAXIS2PLACEMENT2D(#{origin2},#{dir2})"));
+    let profile = w.emit(&format!(
+        "IFCRECTANGLEPROFILEDEF(.AREA.,$,#{p2},{width},{thick})"
+    ));
+    let origin3 = w.emit(&format!(
+        "IFCCARTESIANPOINT((0.,{},0.))",
+        -height / 2.0
+    ));
+    let zdir = w.emit("IFCDIRECTION((0.,0.,1.))");
+    let xdir = w.emit("IFCDIRECTION((1.,0.,0.))");
+    let p3 = w.emit(&format!(
+        "IFCAXIS2PLACEMENT3D(#{origin3},#{zdir},#{xdir})"
+    ));
+    let extrude_dir = w.emit("IFCDIRECTION((0.,0.,1.))");
+    let solid_id = w.emit(&format!(
+        "IFCEXTRUDEDAREASOLID(#{profile},#{p3},#{extrude_dir},{height})"
+    ));
+    let rep = w.emit(&format!(
+        "IFCSHAPEREPRESENTATION(#{ctx},'Body','SweptSolid',(#{solid_id}))"
+    ));
+    w.emit(&format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{rep}))"))
+}
+
+fn emit_measure_pset(
+    w: &mut Writer,
+    owner: u64,
+    target: u64,
+    cid: &Cid,
+    obj: Option<&Object>,
+    solid: &Solid,
+) {
+    let sigma = obj.and_then(|o| o.sigma_mm()).unwrap_or(0.0);
+    let support = obj.map(|o| o.effective_support_count()).unwrap_or(1);
+    let e = solid.extent;
+    let p_s = w.emit(&format!(
+        "IFCPROPERTYSINGLEVALUE({},$,IFCREAL({}),$)",
+        ifc_str("SigmaMm"),
+        sigma
+    ));
+    let p_n = w.emit(&format!(
+        "IFCPROPERTYSINGLEVALUE({},$,IFCINTEGER({}),$)",
+        ifc_str("SupportCount"),
+        support
+    ));
+    let p_x = w.emit(&format!(
+        "IFCPROPERTYSINGLEVALUE({},$,IFCREAL({}),$)",
+        ifc_str("ExtentX"),
+        e[0]
+    ));
+    let p_y = w.emit(&format!(
+        "IFCPROPERTYSINGLEVALUE({},$,IFCREAL({}),$)",
+        ifc_str("ExtentY"),
+        e[1]
+    ));
+    let p_z = w.emit(&format!(
+        "IFCPROPERTYSINGLEVALUE({},$,IFCREAL({}),$)",
+        ifc_str("ExtentZ"),
+        e[2]
+    ));
+    let pset = w.emit(&format!(
+        "IFCPROPERTYSET({},#{owner},{},$,(#{p_s},#{p_n},#{p_x},#{p_y},#{p_z}))",
+        ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
+            format!("pset:meas:{cid}").as_bytes()
+        ))),
+        ifc_str("Pset_ArxosMeasure"),
+    ));
+    w.emit(&format!(
+        "IFCRELDEFINESBYPROPERTIES({},#{owner},$,$,(#{target}),#{pset})",
+        ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
+            format!("rel:meas:{cid}").as_bytes()
+        )))
+    ));
 }
 
 fn emit_identity_pset(

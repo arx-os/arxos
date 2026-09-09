@@ -69,6 +69,8 @@ pub enum ObjectType {
     Surface,
     Opening,
     Equipment,
+    /// Pipe / conduit / cable run (polyline + optional diameter).
+    Run,
     System,
     Circuit,
     Sensor,
@@ -94,6 +96,7 @@ impl ObjectType {
             Self::Surface => "surface",
             Self::Opening => "opening",
             Self::Equipment => "equipment",
+            Self::Run => "run",
             Self::System => "system",
             Self::Circuit => "circuit",
             Self::Sensor => "sensor",
@@ -128,6 +131,7 @@ impl FromStr for ObjectType {
             "surface" => Ok(Self::Surface),
             "opening" => Ok(Self::Opening),
             "equipment" => Ok(Self::Equipment),
+            "run" => Ok(Self::Run),
             "system" => Ok(Self::System),
             "circuit" => Ok(Self::Circuit),
             "sensor" => Ok(Self::Sensor),
@@ -170,6 +174,7 @@ pub enum ObjectBody {
     Surface(SurfaceBody),
     Opening(OpeningBody),
     Equipment(EquipmentBody),
+    Run(RunBody),
     System(SystemBody),
     Circuit(CircuitBody),
     Sensor(SensorBody),
@@ -207,16 +212,38 @@ impl ObjectBody {
                 if let Some(a) = &mut b.bounds {
                     a.canonicalize()?;
                 }
+                canonicalize_fact_fields(&mut b.extent, &mut b.sigma_mm)?;
             }
             Self::Opening(b) => {
                 if let Some(p) = &mut b.pose {
                     p.canonicalize()?;
                 }
+                canonicalize_fact_fields(&mut b.extent, &mut b.sigma_mm)?;
             }
             Self::Equipment(b) => {
                 if let Some(p) = &mut b.pose {
                     p.canonicalize()?;
                 }
+                canonicalize_fact_fields(&mut b.extent, &mut b.sigma_mm)?;
+            }
+            Self::Run(b) => {
+                if let Some(p) = &mut b.pose {
+                    p.canonicalize()?;
+                }
+                for p in &mut b.points {
+                    for v in p {
+                        *v = canonicalize_f64(*v)?;
+                    }
+                }
+                if let Some(d) = &mut b.diameter_m {
+                    *d = canonicalize_f64(*d)?;
+                    if *d < 0.0 {
+                        return Err(Error::Validation(
+                            "run.diameter_m must not be negative".into(),
+                        ));
+                    }
+                }
+                canonicalize_fact_fields(&mut b.extent, &mut b.sigma_mm)?;
             }
             Self::Sensor(b) => {
                 if let Some(p) = &mut b.pose {
@@ -291,16 +318,46 @@ impl ObjectBody {
                 if let Some(a) = &b.bounds {
                     a.validate_finite()?;
                 }
+                validate_fact_fields(&b.extent, &b.sigma_mm)?;
             }
             Self::Opening(b) => {
                 if let Some(p) = &b.pose {
                     p.validate_finite()?;
                 }
+                validate_fact_fields(&b.extent, &b.sigma_mm)?;
             }
             Self::Equipment(b) => {
                 if let Some(p) = &b.pose {
                     p.validate_finite()?;
                 }
+                validate_fact_fields(&b.extent, &b.sigma_mm)?;
+            }
+            Self::Run(b) => {
+                if let Some(p) = &b.pose {
+                    p.validate_finite()?;
+                }
+                for p in &b.points {
+                    for (i, &v) in p.iter().enumerate() {
+                        if !is_finite_f64(v) {
+                            return Err(Error::Validation(format!(
+                                "run.points component [{i}] is not finite"
+                            )));
+                        }
+                    }
+                }
+                if let Some(d) = b.diameter_m {
+                    if !is_finite_f64(d) {
+                        return Err(Error::Validation(
+                            "run.diameter_m is not finite".into(),
+                        ));
+                    }
+                    if d < 0.0 {
+                        return Err(Error::Validation(
+                            "run.diameter_m must not be negative".into(),
+                        ));
+                    }
+                }
+                validate_fact_fields(&b.extent, &b.sigma_mm)?;
             }
             Self::Sensor(b) => {
                 if let Some(p) = &b.pose {
@@ -358,6 +415,7 @@ impl ObjectBody {
             Self::Surface(_) => ObjectType::Surface,
             Self::Opening(_) => ObjectType::Opening,
             Self::Equipment(_) => ObjectType::Equipment,
+            Self::Run(_) => ObjectType::Run,
             Self::System(_) => ObjectType::System,
             Self::Circuit(_) => ObjectType::Circuit,
             Self::Sensor(_) => ObjectType::Sensor,
@@ -442,6 +500,36 @@ impl Pose {
         }
         Ok(())
     }
+
+    /// Rotate a vector by this pose's quaternion (x, y, z, w).
+    pub fn rotate_vector(&self, v: [f64; 3]) -> [f64; 3] {
+        let [qx, qy, qz, qw] = self.orientation;
+        // t = 2 * cross(q_xyz, v)
+        let tx = 2.0 * (qy * v[2] - qz * v[1]);
+        let ty = 2.0 * (qz * v[0] - qx * v[2]);
+        let tz = 2.0 * (qx * v[1] - qy * v[0]);
+        // v + qw * t + cross(q_xyz, t)
+        [
+            v[0] + qw * tx + (qy * tz - qz * ty),
+            v[1] + qw * ty + (qz * tx - qx * tz),
+            v[2] + qw * tz + (qx * ty - qy * tx),
+        ]
+    }
+
+    /// Local +X axis in world coordinates.
+    pub fn local_x(&self) -> [f64; 3] {
+        self.rotate_vector([1.0, 0.0, 0.0])
+    }
+
+    /// Local +Y axis in world coordinates (building-up for identity / RoomPlan walls).
+    pub fn local_y(&self) -> [f64; 3] {
+        self.rotate_vector([0.0, 1.0, 0.0])
+    }
+
+    /// Local +Z axis in world coordinates (plane-rect surface normal).
+    pub fn local_z(&self) -> [f64; 3] {
+        self.rotate_vector([0.0, 0.0, 1.0])
+    }
 }
 
 /// Axis-aligned bounding box.
@@ -514,7 +602,7 @@ pub struct SpaceBody {
     pub properties: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct SurfaceBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<EntityId>,
@@ -522,20 +610,44 @@ pub struct SurfaceBody {
     pub pose: Option<Pose>,
     pub bounds: Option<Aabb>,
     pub surface_kind: Option<String>,
+    /// Width, height, optional depth (meters). RoomPlan `dimensions` map here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<[f64; 3]>,
+    /// 1σ positional uncertainty in millimeters. Missing = unweighted (+inf).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sigma_mm: Option<f64>,
+    /// Independent observations fused into this version. Missing decodes as 0;
+    /// [`effective_support_count`] treats 0 as 1 when pose/extent are present.
+    #[serde(default)]
+    pub support_count: u32,
+    /// Evidence blobs / keyframes. Never used by realization.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Cid>,
     pub properties: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct OpeningBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<EntityId>,
     pub host_surface: Option<Cid>,
+    /// Host wall identity that survives host version collapse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_entity: Option<EntityId>,
     pub pose: Option<Pose>,
     pub opening_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<[f64; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sigma_mm: Option<f64>,
+    #[serde(default)]
+    pub support_count: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Cid>,
     pub properties: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct EquipmentBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<EntityId>,
@@ -543,6 +655,38 @@ pub struct EquipmentBody {
     pub equipment_kind: Option<String>,
     pub pose: Option<Pose>,
     pub system: Option<Cid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<[f64; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sigma_mm: Option<f64>,
+    #[serde(default)]
+    pub support_count: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Cid>,
+    pub properties: BTreeMap<String, String>,
+}
+
+/// Pipe / conduit / cable: polyline + optional diameter.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct RunBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<EntityId>,
+    pub name: Option<String>,
+    pub run_kind: Option<String>,
+    pub pose: Option<Pose>,
+    /// Polyline in building-local meters.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub points: Vec<[f64; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diameter_m: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<[f64; 3]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sigma_mm: Option<f64>,
+    #[serde(default)]
+    pub support_count: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Cid>,
     pub properties: BTreeMap<String, String>,
 }
 
@@ -674,7 +818,19 @@ pub struct Object {
 }
 
 /// Current schema version for newly created objects.
-pub const SCHEMA_VERSION: u32 = 1;
+///
+/// Readers accept [`MIN_SCHEMA_VERSION`]..=[`SCHEMA_VERSION`]. v2 adds optional
+/// Fact fields (`extent`, `sigma_mm`, `support_count`, `evidence`, `host_entity`)
+/// and `ObjectType::Run`. v1 objects still decode (missing fields default).
+pub const SCHEMA_VERSION: u32 = 2;
+
+/// Oldest schema version this reader will load.
+pub const MIN_SCHEMA_VERSION: u32 = 1;
+
+/// True when `v` is a schema this reader accepts.
+pub fn schema_version_supported(v: u32) -> bool {
+    (MIN_SCHEMA_VERSION..=SCHEMA_VERSION).contains(&v)
+}
 
 fn now_secs() -> u64 {
     SystemTime::now()
@@ -802,9 +958,9 @@ impl Object {
                 self.body.object_type()
             )));
         }
-        if self.header.schema_version != SCHEMA_VERSION {
+        if !schema_version_supported(self.header.schema_version) {
             return Err(Error::Validation(format!(
-                "schema_version {} is not supported (expected {SCHEMA_VERSION})",
+                "schema_version {} is not supported (accepted {MIN_SCHEMA_VERSION}..={SCHEMA_VERSION})",
                 self.header.schema_version
             )));
         }
@@ -826,6 +982,184 @@ impl Object {
         obj.validate()?;
         Ok(obj)
     }
+
+    /// Pose of a domain object, if present.
+    pub fn pose(&self) -> Option<&Pose> {
+        match &self.body {
+            ObjectBody::Space(b) => b.pose.as_ref(),
+            ObjectBody::Surface(b) => b.pose.as_ref(),
+            ObjectBody::Opening(b) => b.pose.as_ref(),
+            ObjectBody::Equipment(b) => b.pose.as_ref(),
+            ObjectBody::Run(b) => b.pose.as_ref(),
+            ObjectBody::Sensor(b) => b.pose.as_ref(),
+            ObjectBody::Fixture(b) => b.pose.as_ref(),
+            ObjectBody::Annotation(b) => b.pose.as_ref(),
+            ObjectBody::PointCloudChunk(b) => b.pose.as_ref(),
+            ObjectBody::Mesh(b) => b.pose.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// Mutable pose, if this body carries one.
+    pub fn pose_mut(&mut self) -> Option<&mut Pose> {
+        match &mut self.body {
+            ObjectBody::Space(b) => b.pose.as_mut(),
+            ObjectBody::Surface(b) => b.pose.as_mut(),
+            ObjectBody::Opening(b) => b.pose.as_mut(),
+            ObjectBody::Equipment(b) => b.pose.as_mut(),
+            ObjectBody::Run(b) => b.pose.as_mut(),
+            ObjectBody::Sensor(b) => b.pose.as_mut(),
+            ObjectBody::Fixture(b) => b.pose.as_mut(),
+            ObjectBody::Annotation(b) => b.pose.as_mut(),
+            ObjectBody::PointCloudChunk(b) => b.pose.as_mut(),
+            ObjectBody::Mesh(b) => b.pose.as_mut(),
+            _ => None,
+        }
+    }
+
+    /// Stored extent, or derived from `bounds` when missing.
+    pub fn extent(&self) -> Option<[f64; 3]> {
+        let stored = match &self.body {
+            ObjectBody::Surface(b) => b.extent,
+            ObjectBody::Opening(b) => b.extent,
+            ObjectBody::Equipment(b) => b.extent,
+            ObjectBody::Run(b) => b.extent,
+            _ => None,
+        };
+        if stored.is_some() {
+            return stored;
+        }
+        match &self.body {
+            ObjectBody::Surface(b) => b.bounds.as_ref().map(|a| a.extents()),
+            ObjectBody::Space(b) => b.bounds.as_ref().map(|a| a.extents()),
+            _ => None,
+        }
+    }
+
+    /// 1σ in millimeters, if present and finite.
+    pub fn sigma_mm(&self) -> Option<f64> {
+        match &self.body {
+            ObjectBody::Surface(b) => b.sigma_mm,
+            ObjectBody::Opening(b) => b.sigma_mm,
+            ObjectBody::Equipment(b) => b.sigma_mm,
+            ObjectBody::Run(b) => b.sigma_mm,
+            _ => None,
+        }
+        .filter(|s| s.is_finite() && *s > 0.0)
+    }
+
+    /// Stored support count (0 if the field was missing on decode).
+    pub fn stored_support_count(&self) -> u32 {
+        match &self.body {
+            ObjectBody::Surface(b) => b.support_count,
+            ObjectBody::Opening(b) => b.support_count,
+            ObjectBody::Equipment(b) => b.support_count,
+            ObjectBody::Run(b) => b.support_count,
+            _ => 0,
+        }
+    }
+
+    /// Effective observation count for fuse.
+    ///
+    /// Missing/`0` → `1` if the object has pose or extent, else `0`.
+    pub fn effective_support_count(&self) -> u32 {
+        let stored = self.stored_support_count();
+        if stored > 0 {
+            stored
+        } else if self.pose().is_some() || self.extent().is_some() {
+            1
+        } else {
+            0
+        }
+    }
+
+    /// Evidence CIDs (empty when the field is absent).
+    pub fn evidence(&self) -> &[Cid] {
+        match &self.body {
+            ObjectBody::Surface(b) => &b.evidence,
+            ObjectBody::Opening(b) => &b.evidence,
+            ObjectBody::Equipment(b) => &b.evidence,
+            ObjectBody::Run(b) => &b.evidence,
+            _ => &[],
+        }
+    }
+
+    /// Opening host entity, if this is an opening.
+    pub fn host_entity(&self) -> Option<&EntityId> {
+        match &self.body {
+            ObjectBody::Opening(b) => b.host_entity.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// Kind family used by fuse: (`object_type`, optional kind string).
+    pub fn kind_family(&self) -> Option<(ObjectType, Option<&str>)> {
+        match &self.body {
+            ObjectBody::Surface(b) => Some((ObjectType::Surface, b.surface_kind.as_deref())),
+            ObjectBody::Opening(b) => Some((ObjectType::Opening, b.opening_kind.as_deref())),
+            ObjectBody::Equipment(b) => Some((ObjectType::Equipment, b.equipment_kind.as_deref())),
+            ObjectBody::Run(b) => Some((ObjectType::Run, b.run_kind.as_deref())),
+            ObjectBody::Space(b) => Some((ObjectType::Space, b.name.as_deref())),
+            ObjectBody::Floor(_) => Some((ObjectType::Floor, None)),
+            _ => None,
+        }
+    }
+}
+
+fn canonicalize_fact_fields(extent: &mut Option<[f64; 3]>, sigma_mm: &mut Option<f64>) -> Result<()> {
+    if let Some(e) = extent {
+        canonicalize_extent(e)?;
+    }
+    if let Some(s) = sigma_mm {
+        *s = canonicalize_f64(*s)?;
+        if *s <= 0.0 {
+            return Err(Error::Validation(
+                "sigma_mm must be > 0 when present".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_fact_fields(extent: &Option<[f64; 3]>, sigma_mm: &Option<f64>) -> Result<()> {
+    if let Some(e) = extent {
+        for (i, &v) in e.iter().enumerate() {
+            if !is_finite_f64(v) {
+                return Err(Error::Validation(format!(
+                    "extent[{i}] is not finite"
+                )));
+            }
+            if v < 0.0 {
+                return Err(Error::Validation(format!(
+                    "extent[{i}] must not be negative"
+                )));
+            }
+        }
+    }
+    if let Some(s) = sigma_mm {
+        if !is_finite_f64(*s) {
+            return Err(Error::Validation("sigma_mm is not finite".into()));
+        }
+        if *s <= 0.0 {
+            return Err(Error::Validation(
+                "sigma_mm must be > 0 when present".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Fold extent components: finite-only, `-0.0` → `+0.0`, reject negatives.
+pub fn canonicalize_extent(e: &mut [f64; 3]) -> Result<()> {
+    for (i, v) in e.iter_mut().enumerate() {
+        *v = canonicalize_f64(*v)?;
+        if *v < 0.0 {
+            return Err(Error::Validation(format!(
+                "extent[{i}] must not be negative"
+            )));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1055,6 +1389,95 @@ mod tests {
         } else {
             panic!("expected annotation");
         }
+    }
+
+    #[test]
+    fn schema_v1_still_validates() {
+        let obj = Object {
+            header: ObjectHeader {
+                object_type: ObjectType::Annotation,
+                schema_version: 1,
+                created: 1,
+                author: None,
+                signature: None,
+            },
+            body: ObjectBody::Annotation(AnnotationBody {
+                text: Some("v1".into()),
+                transcript: None,
+                media_ref: None,
+                pose: None,
+                space: None,
+                properties: BTreeMap::new(),
+            }),
+        };
+        obj.validate().unwrap();
+    }
+
+    #[test]
+    fn extent_canonicalize_folds_neg_zero_rejects_negative() {
+        let mut e = [-0.0, 1.0, 0.2];
+        canonicalize_extent(&mut e).unwrap();
+        assert_eq!(e[0].to_bits(), 0.0f64.to_bits());
+        let mut bad = [1.0, -0.5, 0.1];
+        assert!(canonicalize_extent(&mut bad).is_err());
+    }
+
+    #[test]
+    fn legacy_surface_cbor_without_fact_fields_decodes() {
+        #[derive(Serialize)]
+        struct LegacySurface {
+            entity_id: Option<EntityId>,
+            space: Option<Cid>,
+            pose: Option<Pose>,
+            bounds: Option<Aabb>,
+            surface_kind: Option<String>,
+            properties: BTreeMap<String, String>,
+        }
+        #[derive(Serialize)]
+        #[serde(tag = "kind", content = "data", rename_all = "snake_case")]
+        enum LegacyBody {
+            Surface(LegacySurface),
+        }
+        #[derive(Serialize)]
+        struct LegacyObject {
+            header: ObjectHeader,
+            body: LegacyBody,
+        }
+        let legacy = LegacyObject {
+            header: ObjectHeader {
+                object_type: ObjectType::Surface,
+                schema_version: 1,
+                created: 42,
+                author: None,
+                signature: None,
+            },
+            body: LegacyBody::Surface(LegacySurface {
+                entity_id: Some(EntityId::from("wall-legacy".to_string())),
+                space: None,
+                pose: Some(Pose::default()),
+                bounds: Some(Aabb {
+                    min: [0.0, 0.0, 0.0],
+                    max: [4.0, 2.5, 0.15],
+                }),
+                surface_kind: Some("wall".into()),
+                properties: BTreeMap::new(),
+            }),
+        };
+        let bytes = to_canonical_cbor(&legacy).unwrap();
+        let obj = Object::from_canonical_bytes(&bytes).unwrap();
+        match &obj.body {
+            ObjectBody::Surface(s) => {
+                assert!(s.extent.is_none());
+                assert!(s.sigma_mm.is_none());
+                assert_eq!(s.support_count, 0);
+                assert!(s.evidence.is_empty());
+            }
+            other => panic!("expected surface, got {other:?}"),
+        }
+        assert_eq!(obj.effective_support_count(), 1);
+        let derived = obj.extent().unwrap();
+        assert!((derived[0] - 4.0).abs() < 1e-12);
+        assert!((derived[1] - 2.5).abs() < 1e-12);
     }
 
     #[test]

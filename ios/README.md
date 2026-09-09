@@ -57,7 +57,7 @@ In Xcode:
 
 1. **Init** a building (or reopen last — restored automatically after force-quit).
 2. **Start RoomPlan scan** → walk the room → **Stop**.
-3. Ingest + **auto-commit** runs (status shows committed root).
+3. Ingest + **auto-commit** runs (status shows **facts committed**). The scan is the capture session; the product is Facts in the CAS, not a scan file.
 4. Force-quit → reopen → same building and head.
 5. **Export store…** to AirDrop / share a snapshot to a Mac. The live store is not in Files.app.
 

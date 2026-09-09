@@ -563,6 +563,42 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     println!("store_lock={lock_status}");
                 }
             }
+            BuildingCommands::Slice {
+                building_id,
+                z,
+                cell,
+                width,
+            } => {
+                let bid = BuildingId::from_str(&building_id)?;
+                let repo = BuildingRepository::open_read(&cli.store, &bid)
+                    .with_context(|| format!("open building {bid} for read"))?;
+                let head = repo
+                    .head_root()
+                    .ok_or_else(|| anyhow::anyhow!("building {bid} has no head root"))?;
+                let root_obj = repo.get_object(&head)?;
+                let root = RootBody::from_object(&root_obj)?;
+                let state = arxos_core::BuildingState::from_root(&repo, root)?;
+                let realization = arxos_core::realize(&state)?;
+                let mut walls = 0u64;
+                let mut openings = 0u64;
+                let mut equipment = 0u64;
+                for s in &realization.solids {
+                    match s.kind {
+                        arxos_core::SolidKind::Wall | arxos_core::SolidKind::Slab => walls += 1,
+                        arxos_core::SolidKind::Opening => openings += 1,
+                        arxos_core::SolidKind::Equipment | arxos_core::SolidKind::Run => {
+                            equipment += 1
+                        }
+                    }
+                }
+                eprintln!(
+                    "entities solids={} walls/slabs={walls} openings={openings} equipment={equipment} spaces={} notes={}",
+                    realization.solids.len(),
+                    realization.spaces.len(),
+                    realization.notes.len()
+                );
+                print!("{}", arxos_core::ascii_slice(&realization, z, cell, width));
+            }
         },
         Commands::Entity { command } => match command {
             EntityCommands::Remove {
@@ -607,22 +643,39 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                     .with_context(|| format!("open building {bid} for read"))?;
                 let heads = repo.list_entity_heads()?;
                 if json {
-                    let v: Vec<_> = heads
-                        .iter()
-                        .map(|(eid, cid, ty)| {
-                            serde_json::json!({
-                                "entity_id": eid.to_string(),
-                                "cid": cid.to_string(),
-                                "type": ty.to_string(),
-                            })
-                        })
-                        .collect();
+                    let mut v = Vec::new();
+                    for (eid, cid, ty) in &heads {
+                        let obj = repo.get_object(cid)?;
+                        v.push(serde_json::json!({
+                            "entity_id": eid.to_string(),
+                            "cid": cid.to_string(),
+                            "type": ty.to_string(),
+                            "extent": obj.extent(),
+                            "sigma_mm": obj.sigma_mm(),
+                            "support_count": obj.effective_support_count(),
+                        }));
+                    }
                     println!("{}", serde_json::to_string_pretty(&v)?);
                 } else {
                     println!("building_id={bid}");
                     println!("entities={}", heads.len());
                     for (eid, cid, ty) in heads {
-                        println!("  {eid}  {ty}  {cid}");
+                        let obj = repo.get_object(&cid)?;
+                        let mut extra = String::new();
+                        if let Some(e) = obj.extent() {
+                            extra.push_str(&format!(
+                                "  extent=[{:.3},{:.3},{:.3}]",
+                                e[0], e[1], e[2]
+                            ));
+                        }
+                        if let Some(s) = obj.sigma_mm() {
+                            extra.push_str(&format!("  sigma_mm={s}"));
+                        }
+                        let n = obj.effective_support_count();
+                        if n > 0 {
+                            extra.push_str(&format!("  support={n}"));
+                        }
+                        println!("  {eid}  {ty}  {cid}{extra}");
                     }
                 }
             }
@@ -715,6 +768,9 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                                 "min": b.min,
                                 "max": b.max,
                             })),
+                            "extent": obj.extent(),
+                            "sigma_mm": obj.sigma_mm(),
+                            "support_count": obj.effective_support_count(),
                         }))?
                     );
                 } else {
@@ -746,6 +802,16 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                             b.min[0], b.min[1], b.min[2], b.max[0], b.max[1], b.max[2]
                         );
                     }
+                    if let Some(e) = obj.extent() {
+                        println!(
+                            "extent=[{:.3},{:.3},{:.3}]",
+                            e[0], e[1], e[2]
+                        );
+                    }
+                    if let Some(s) = obj.sigma_mm() {
+                        println!("sigma_mm={s}");
+                    }
+                    println!("support_count={}", obj.effective_support_count());
                 }
             }
         },
@@ -852,39 +918,27 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 building_id,
                 name,
                 text,
+                dx,
+                dz,
+                sigma_mm,
                 commit,
                 message,
             } => {
                 let bid = BuildingId::from_str(&building_id)?;
                 let mut repo = BuildingRepository::open(&cli.store, &bid)?;
-                let space = repo.capture_space(&SpaceCapture {
-                    entity_id: None,
-                    name: Some(name),
-                    pose: Pose {
-                        position: [1.0, 0.0, 1.0],
-                        orientation: [0.0, 0.0, 0.0, 1.0],
-                    },
-                    bounds: None,
-                    floor: None,
-                    properties: {
-                        let mut p = BTreeMap::new();
-                        p.insert("source".into(), "simulate".into());
-                        p
-                    },
-                })?;
-                println!("space={}", space.cid);
-                let mut pts = Vec::new();
-                for i in 0..8 {
-                    for j in 0..8 {
-                        pts.push([i as f32 * 0.25, 0.0, j as f32 * 0.25]);
-                    }
+                let geom = arxos_core::hall_four_walls([dx, 0.0, dz], sigma_mm);
+                let created = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let mut mapped = arxos_core::map_roomplan(&geom, created)?;
+                mapped.set_sigma_mm(sigma_mm);
+                if let arxos_core::object::ObjectBody::Space(ref mut s) = mapped.space.body {
+                    s.name = Some(name);
                 }
-                let cloud = repo.capture_point_cloud(&PointCloudCapture::from_xyz(
-                    &pts,
-                    Pose::default(),
-                    None,
-                ))?;
-                println!("point_cloud={} points={}", cloud.cid, 64);
+                let staged = repo.ingest_mapped_roomplan(mapped)?;
+                println!("space={}", staged.space);
+                println!("surfaces={}", staged.surfaces.len());
                 let ann = repo.capture_annotation(&AnnotationCapture::new(
                     text,
                     Pose {
@@ -894,7 +948,7 @@ pub fn run_sync(cli: Cli) -> Result<()> {
                 ))?;
                 println!("annotation={}", ann.cid);
                 if commit {
-                    let res = repo.commit(message.or_else(|| Some("simulate capture".into())))?;
+                    let res = repo.commit(message.or_else(|| Some("simulate facts".into())))?;
                     println!("root_cid={}", res.root_cid);
                     println!("object_count={}", res.object_count);
                 } else {

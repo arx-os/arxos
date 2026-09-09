@@ -112,3 +112,50 @@ fn ifc_unsigned_import_refused() {
         "expected unsigned import refusal, got {err}"
     );
 }
+
+#[test]
+fn ifc_wall_fact_emits_ifcwall() {
+    use arxos_core::entity::EntityId;
+    use arxos_core::object::{Object, ObjectBody, SurfaceBody};
+
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let kp = Keypair::generate();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("Wall Hall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
+    let bid = repo.building_id().clone();
+    let eid = EntityId::from("rp:wall-export-1".to_string());
+    let wall = Object::new_with_created(
+        ObjectBody::Surface(SurfaceBody {
+            entity_id: Some(eid.clone()),
+            pose: Some(Pose {
+                position: [2.0, 1.25, 0.0],
+                orientation: [0.0, 0.0, 0.0, 1.0],
+            }),
+            surface_kind: Some("wall".into()),
+            extent: Some([4.0, 2.5, 0.15]),
+            sigma_mm: Some(40.0),
+            support_count: 1,
+            ..Default::default()
+        }),
+        1,
+    );
+    repo.stage_captured_object(wall).unwrap();
+    repo.commit(Some("one wall".into())).unwrap();
+    drop(repo);
+
+    let ifc = export_building_ifc(path, &bid, &ExportOptions::default()).unwrap();
+    assert!(
+        ifc.contains("IFCWALL") || ifc.contains("IFCWALLSTANDARDCASE"),
+        "expected IFCWALL in export, got:\n{}",
+        &ifc[..ifc.len().min(2000)]
+    );
+    assert!(ifc.contains("Pset_ArxosIdentity"));
+    assert!(ifc.contains("EntityId") || ifc.contains("rp:wall-export-1"));
+    assert!(ifc.contains("Pset_ArxosMeasure"));
+    assert!(ifc.contains("IFCEXTRUDEDAREASOLID"));
+}

@@ -218,14 +218,14 @@ final class BuildingSession: ObservableObject {
             summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
             hasUncommittedStaging = false
             rememberBuilding(id)
-            status = "Committed root \(r.rootCid.prefix(18))… (\(r.objectCount) objects) — safe to force-quit"
+            status = "Facts committed \(r.rootCid.prefix(18))… (\(r.objectCount) objects) — safe to force-quit"
             refreshNearby()
         } catch {
             report(error)
         }
     }
 
-    /// Ingest RoomPlan structured geometry, then **auto-commit** so force-quit cannot lose the scan.
+    /// Ingest RoomPlan structured geometry as Facts, then **auto-commit** so force-quit cannot lose committed facts.
     func ingestRoomPlan(
         surfaces: [RoomPlanSurface],
         objects: [RoomPlanObject],
@@ -247,7 +247,7 @@ final class BuildingSession: ObservableObject {
             summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
             status = "RoomPlan staged: space \(res.spaceCid.prefix(8)), \(res.surfaceCids.count) surfaces, \(res.objectCids.count) objects"
             if autoCommit {
-                commit(message: "roomplan scan")
+                commit(message: "roomplan facts")
             } else {
                 refreshNearby()
             }

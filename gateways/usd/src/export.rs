@@ -4,8 +4,10 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use arxos_core::object::{Object, ObjectBody, ObjectType, Pose};
+use arxos_core::realize::{realize, SolidKind};
 use arxos_core::repository::BuildingRepository;
 use arxos_core::root::{ClosureOptions, RootBody, RootClosure};
+use arxos_core::state::BuildingState;
 use arxos_core::store::{ObjectRead, ObjectStore};
 use arxos_core::{BuildingId, Cid};
 
@@ -140,7 +142,11 @@ fn project_root<R: ObjectRead + ?Sized>(
             }
             ObjectType::Floor => floors.push((*cid, obj)),
             ObjectType::Space => spaces.push((*cid, obj)),
-            ObjectType::Root | ObjectType::SpatialIndexNode => {}
+            ObjectType::Root
+            | ObjectType::SpatialIndexNode
+            | ObjectType::Surface
+            | ObjectType::Opening
+            | ObjectType::Run => {}
             _ => other.push((*cid, obj)),
         }
     }
@@ -159,19 +165,65 @@ fn project_root<R: ObjectRead + ?Sized>(
         stage.prims.push(object_to_prim(&path, cid, obj, opts)?);
     }
     for (cid, obj) in &other {
+        if obj.header.object_type == ObjectType::Equipment {
+            continue; // emitted from realization as a cube
+        }
         let parent = match obj.header.object_type {
             ObjectType::Annotation
             | ObjectType::PointCloudChunk
-            | ObjectType::Equipment
             | ObjectType::Sensor
             | ObjectType::Fixture => {
-                // Prefer space path if space ref present
                 other_parent_path(&building_path, obj, &spaces)
             }
             _ => building_path.clone(),
         };
         let path = format!("{parent}/{}", prim_name(obj, cid));
         stage.prims.push(object_to_prim(&path, cid, obj, opts)?);
+    }
+
+    let state = BuildingState::from_root(store, root)?;
+    let realization = realize(&state)?;
+    for solid in &realization.solids {
+        let kind = solid.kind.as_str();
+        let short = solid.entity_id.as_str();
+        let name = sanitize_name(&format!("{kind}_{short}"));
+        let path = format!("{building_path}/{name}");
+        let mut prim = UsdPrim {
+            path,
+            type_name: match solid.kind {
+                SolidKind::Run => "BasisCurves".into(),
+                _ => "Cube".into(),
+            },
+            specifier: "def".into(),
+            attrs: BTreeMap::new(),
+            metadata: BTreeMap::new(),
+        };
+        prim.attrs.insert(
+            "arxos:cid".into(),
+            UsdValue::String(solid.cid.to_string()),
+        );
+        prim.attrs.insert(
+            "arxos:entityId".into(),
+            UsdValue::String(solid.entity_id.to_string()),
+        );
+        prim.attrs.insert(
+            "arxos:solidKind".into(),
+            UsdValue::String(kind.into()),
+        );
+        prim.attrs.insert(
+            "xformOp:translate".into(),
+            UsdValue::Float3(solid.pose.position),
+        );
+        prim.attrs
+            .insert("xformOp:scale".into(), UsdValue::Float3(solid.extent));
+        prim.attrs.insert("size".into(), UsdValue::Float(1.0));
+        if let Some(host) = &solid.host {
+            prim.attrs.insert(
+                "arxos:hostEntity".into(),
+                UsdValue::String(host.to_string()),
+            );
+        }
+        stage.prims.push(prim);
     }
 
     Ok(stage)
@@ -369,6 +421,7 @@ fn extract_pose(obj: &Object) -> Option<Pose> {
         ObjectBody::Surface(b) => b.pose.clone(),
         ObjectBody::Opening(b) => b.pose.clone(),
         ObjectBody::Equipment(b) => b.pose.clone(),
+        ObjectBody::Run(b) => b.pose.clone(),
         ObjectBody::Sensor(b) => b.pose.clone(),
         ObjectBody::Fixture(b) => b.pose.clone(),
         ObjectBody::Annotation(b) => b.pose.clone(),
@@ -389,6 +442,8 @@ fn extract_properties(obj: &Object) -> BTreeMap<String, String> {
         ObjectBody::Sensor(b) => b.properties.clone(),
         ObjectBody::Fixture(b) => b.properties.clone(),
         ObjectBody::Surface(b) => b.properties.clone(),
+        ObjectBody::Opening(b) => b.properties.clone(),
+        ObjectBody::Run(b) => b.properties.clone(),
         _ => BTreeMap::new(),
     }
 }

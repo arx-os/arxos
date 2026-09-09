@@ -366,6 +366,19 @@ pub enum BuildingCommands {
         #[arg(long)]
         json: bool,
     },
+    /// ASCII occupancy slice of realized solids (diagnostic projector, not a viewer)
+    Slice {
+        building_id: String,
+        /// Height of the slice plane (world Y, meters)
+        #[arg(long, default_value_t = 1.2)]
+        z: f64,
+        /// Grid cell size (meters)
+        #[arg(long, default_value_t = 0.25)]
+        cell: f64,
+        /// Maximum character width
+        #[arg(long, default_value_t = 80)]
+        width: usize,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -442,13 +455,22 @@ pub enum CaptureCommands {
         #[arg(long)]
         quiet: bool,
     },
-    /// Simulate a full RoomPlan-like capture: space + point cloud + annotation
+    /// Simulate RoomPlan-equivalent wall Facts (4×4 m hall) + a note
     Simulate {
         building_id: String,
         #[arg(long, default_value = "Simulated Room")]
         name: String,
         #[arg(long, default_value = "simulated note")]
         text: String,
+        /// Translation applied to all wall poses (meters, world X)
+        #[arg(long, default_value_t = 0.0)]
+        dx: f64,
+        /// Translation applied to all wall poses (meters, world Z)
+        #[arg(long, default_value_t = 0.0)]
+        dz: f64,
+        /// 1σ in millimetres (default RoomPlan-grade)
+        #[arg(long, default_value_t = 40.0)]
+        sigma_mm: f64,
         #[arg(long)]
         commit: bool,
         #[arg(long)]

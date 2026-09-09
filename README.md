@@ -2,16 +2,18 @@
 
 A local-first record of the built world.
 
-Buildings as they actually are — rooms, equipment, notes, scans — live as signed objects on the devices that captured them. Walk a site with a LiDAR iPhone. Arxos writes what you captured to a folder on the device. Copy that folder to a machine to inspect it, export IFC or USD, or pull it onto another replica. There is no cloud in the loop.
+Contributors commit **Facts** (tiny signed geometric claims). The official building is a state map \(S\) from names to primitives; owners fuse rescans, realize solids, and project IFC / USD / ASCII. Arxos is not a renderer and does not store a scan file as the building.
+
+Walk a site with a LiDAR iPhone. The phone is a camera that mints Facts into a local CAS. Copy that store to a machine to inspect it, export IFC or USD, or pull it onto another replica. There is no cloud in the loop.
 
 ## How it works
 
 Field contributors write the as-built record at the wall.
 
-1. **Capture.** A phone, laptop, or edge node records spaces, point clouds, meshes, and annotations.
-2. **Commit.** Each object is an immutable file named by a hash of its contents. A building’s history is a chain of signed Roots. Controllers — keys on the Building object — commit, adopt, and merge.
+1. **Capture.** A phone, laptop, or edge node mints Facts (walls, openings, equipment, notes). Point clouds and meshes may be evidence; they are not \(B = R(S)\).
+2. **Commit / fuse.** Each object is an immutable file named by a hash of its contents. A second walk of the same `EntityId` fuses into one live version. Controllers — keys on the Building object — commit, adopt, and merge.
 3. **Replicate.** Another machine pulls a Root over the LAN (Iroh + mDNS) or receives the store folder. Official history is whoever those controller keys accept.
-4. **Use.** Inspect the head, list entities, score contributors, export IFC or USD for the tools that already run a building.
+4. **Realize / project.** \(B = R(S)\) is oriented boxes. Export IFC or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
 
 One process writes a given store at a time. Extra work is just another Root CID. There is no proposal type.
 
@@ -27,11 +29,12 @@ Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do 
 
 ## What works today
 
-- Capture on a LiDAR iPhone (RoomPlan) or with `arx capture`
-- Inspect the head, list entities, diagnostic scoring (`arx score`)
+- Capture on a LiDAR iPhone (RoomPlan) or with `arx capture simulate` (wall Facts, σ = 40 mm)
+- Inspect the head, list entities (extent / σ / support), diagnostic scoring (`arx score`)
+- Fuse on commit: same Apple UUID / `EntityId` updates the wall instead of stacking walls
+- Realize solids and project IFC (`IFCWALL`), USD (cube prims), ASCII (`arx building slice`)
 - LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
-- Merge concurrent controller tips
-- USD and IFC export from the current head; import writes a new commit
+- Merge concurrent controller tips (entity conflicts fuse)
 
 Not built: accounts, an HTTP site, a public directory, or an inbox for
 non-controllers. A non-controller cannot commit official history
@@ -67,11 +70,11 @@ LiDAR iPhone, iOS 17+, full Xcode (not Command Line Tools).
 open ios/ArxosApp/ArxosApp.xcodeproj
 ```
 
-Init a building, start a RoomPlan scan, stop. The app commits into
-Application Support (`arxos-store`, excluded from backup). Use **Export store…**
-to AirDrop a snapshot to a Mac and point `arx` at it with `--store`. The app is
-a replica with a camera, not a browser; network pull is not wired in the UI.
-Details: [ios/README.md](ios/README.md).
+Init a building, start a RoomPlan scan, stop. Facts are ingested and
+auto-committed into Application Support (`arxos-store`, excluded from backup).
+Use **Export store…** to AirDrop a snapshot to a Mac and point `arx` at it with
+`--store`. The app is a camera that mints Facts, not a scan-file folder as the
+happy path. Details: [ios/README.md](ios/README.md).
 
 ## Pull and merge
 

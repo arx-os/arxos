@@ -113,10 +113,29 @@ pub fn entry_from_object(cid: Cid, obj: &Object) -> Option<SpatialEntry> {
             (bounds, None)
         }
         ObjectBody::Equipment(b) => {
-            let bounds = b
-                .pose
-                .as_ref()
-                .map(|p| Aabb::from_pose(p, POINT_HALF_EXTENT_M))?;
+            let half = b
+                .extent
+                .map(|e| (e[0].max(e[1]).max(e[2]) / 2.0).max(POINT_HALF_EXTENT_M))
+                .unwrap_or(POINT_HALF_EXTENT_M);
+            let bounds = b.pose.as_ref().map(|p| Aabb::from_pose(p, half))?;
+            (bounds, None)
+        }
+        ObjectBody::Run(b) => {
+            let bounds = if b.points.len() >= 2 {
+                let mut min = [f64::INFINITY; 3];
+                let mut max = [f64::NEG_INFINITY; 3];
+                for p in &b.points {
+                    for i in 0..3 {
+                        min[i] = min[i].min(p[i]);
+                        max[i] = max[i].max(p[i]);
+                    }
+                }
+                Some(Aabb { min, max })
+            } else {
+                b.pose
+                    .as_ref()
+                    .map(|p| Aabb::from_pose(p, POINT_HALF_EXTENT_M))
+            }?;
             (bounds, None)
         }
         ObjectBody::Sensor(b) => {

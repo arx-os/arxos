@@ -22,6 +22,7 @@ use crate::cid::Cid;
 use crate::crypto::Keypair;
 use crate::entity::collapse_active_set;
 use crate::error::{Error, Result};
+use crate::fuse::fuse_active_set;
 use crate::object::{BuildingId, Object, ObjectBody, ObjectType, Pose};
 use crate::root::{resolve_controller_keys, RootBody, RootBuilder};
 use crate::spatial;
@@ -462,7 +463,8 @@ pub fn merge_roots_with_replica<W: ObjectWrite + ?Sized>(
 
     let before = objects.len() as u64;
 
-    // Entity collapse (same physical entity → one version).
+    // Geometric fuse when both tips carry the same EntityId, then collapse.
+    objects = fuse_active_set(store, &objects, Some(keypair))?;
     let collapsed = collapse_active_set(store, &objects)?;
     objects = collapsed.kept;
 

@@ -1,7 +1,10 @@
 //! Capture helpers: turn device/sensor payloads into content-addressed objects.
 //!
-//! Phase 1 focuses on Space, PointCloudChunk, and Annotation. ARKit / RoomPlan
-//! run on-device; this module is the pure, testable conversion boundary.
+//! RoomPlan mapping lives in [`roomplan`]: Apple UUIDs become stable Facts.
+//! Point clouds and meshes may be referenced as evidence; they are not the
+//! official geometry of a wall.
+
+pub mod roomplan;
 
 use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};

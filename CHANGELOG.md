@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Facts / state / realize
+
+- Schema v2: optional `extent`, `sigma_mm`, `support_count`, `evidence` on
+  Surface / Opening / Equipment, `host_entity` on Opening, new `ObjectType::Run`.
+  v1 objects still load.
+- RoomPlan ingest lives in `core::capture::roomplan`. Apple UUIDs become
+  `rp:` + lowercase uuid. Doors/windows are Opening Facts hosted on the nearest wall.
+- `BuildingState`, `fuse` on commit/merge, `realize` v1 (oriented boxes).
+- IFC/USD projectors consume \(R(S)\): `IFCWALL` + `Pset_ArxosMeasure`; USD Cube prims.
+- `arx building slice` ASCII occupancy projector. `arx capture simulate` mints wall Facts (σ 40 mm).
+
 ### Security / fail-closed
 
 - In-process exclusive store lock (two handles / threads in one process fail closed).
@@ -26,7 +37,8 @@
 - First-contact TOFU can be pinned with `--trust-controllers` /
   `AdoptOptions.expected_controllers`.
 - Extra unauthorized co-author on a Root is rejected (test).
-- `schema_version` must equal `SCHEMA_VERSION` (currently 1).
+- `schema_version` must be in `MIN_SCHEMA_VERSION..=SCHEMA_VERSION` (currently 1..=2).
+  v2 adds optional Fact fields and `ObjectType::Run`; v1 objects still decode.
 - iOS controller seed is Keychain-backed; init does not persist `keys/device.seed`
   when a process seed is set; store export omits `keys/`.
 

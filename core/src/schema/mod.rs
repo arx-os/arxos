@@ -11,6 +11,7 @@ pub fn initial_object_types() -> &'static [ObjectType] {
         ObjectType::Surface,
         ObjectType::Opening,
         ObjectType::Equipment,
+        ObjectType::Run,
         ObjectType::System,
         ObjectType::Circuit,
         ObjectType::Sensor,

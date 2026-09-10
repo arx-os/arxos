@@ -28,6 +28,7 @@ pub mod error;
 pub mod fuse;
 pub mod inbox;
 pub mod locator;
+pub mod measure;
 pub mod merge;
 pub mod object;
 pub mod realize;
@@ -78,8 +79,9 @@ pub use inbox::{
     InboxAdd, InboxEntry, InboxFile, PushRetryFile,
 };
 pub use locator::BuildingLocator;
+pub use measure::SIGMA_EXCLUDE_MM;
 pub use realize::{
-    ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM,
+    ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind,
 };
 pub use state::BuildingState;
 pub use scoring::{

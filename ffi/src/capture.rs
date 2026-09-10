@@ -248,7 +248,9 @@ pub struct PullResultSummary {
 /// Ingest RoomPlan structured surfaces and objects as Facts, and stage.
 ///
 /// Mapping lives in `arxos_core::capture::roomplan`. Doors/windows become
-/// Openings hosted on the nearest wall. Apple UUIDs become stable EntityIds.
+/// Openings hosted on a wall when the heuristic accepts one. Apple UUIDs
+/// become stable EntityIds (`rp:` + lowercase uuid); this path does not mint
+/// random ids.
 pub fn ingest_room_plan(
     store_path: String,
     building_id: String,

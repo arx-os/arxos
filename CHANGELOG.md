@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Field / RoomPlan hosting
+
+- Opening host assignment projects the opening origin onto wall planes
+  (`surface_kind = wall` only). Reject plane distance `> 0.35 m` or a
+  projection outside wall `extent` padded by `0.15 m`. Winner: nearest plane,
+  then larger face area, then higher CID. No host → `host_entity = None` and
+  property `host=unresolved` (realize / IFC skip the void relationship).
+- Identical Apple UUIDs still map to `rp:` + lowercase uuid (FFI does not mint
+  random RoomPlan ids).
+- `arx capture simulate` emits a hosted door on the south wall (stable UUID) so
+  fuse and voids are testable with `--dx` / `--sigma-mm` and no phone.
+- Operator checklist: `docs/field/ROOM_WALK.md`.
+
 ### Docs / hygiene
 
 - Public `SECURITY.md` and `CONTRIBUTING.md`. `REVIEW.md` removed from `main`.
@@ -31,7 +44,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Surface / Opening / Equipment, `host_entity` on Opening, new `ObjectType::Run`.
   v1 objects still load (`MIN_SCHEMA_VERSION..=SCHEMA_VERSION` is 1..=2).
 - RoomPlan ingest in `core::capture::roomplan`. Apple UUIDs become `rp:` + lowercase uuid.
-  Doors/windows are Opening Facts hosted on the nearest wall.
+  Doors/windows are Opening Facts hosted on a wall when the plane+extent
+  heuristic accepts one (otherwise `host=unresolved`).
 - `BuildingState`, `fuse` on commit/merge, `realize` v1 (oriented boxes).
 - IFC/USD projectors consume \(R(S)\): `IFCWALL` + `Pset_ArxosMeasure`; USD Cube prims.
 - `arx building slice` ASCII occupancy. `arx capture simulate` mints wall Facts (σ 40 mm).

@@ -54,9 +54,10 @@ pub use capture::{
     PointCloudCapture, SpaceCapture,
 };
 pub use capture::roomplan::{
-    entity_id_from_roomplan_uuid, hall_four_walls, map_roomplan, space_entity_id_from_surface_ids,
-    MappedRoomPlan, RoomPlanGeometry, RoomPlanObject, RoomPlanSurface, ROOMPLAN_EQUIPMENT_SIGMA_MM,
-    ROOMPLAN_SURFACE_SIGMA_MM,
+    entity_id_from_roomplan_uuid, hall_four_walls, hall_four_walls_with_door, map_roomplan,
+    resolve_opening_host, space_entity_id_from_surface_ids, MappedRoomPlan, RoomPlanGeometry,
+    RoomPlanObject, RoomPlanSurface, WallHostCandidate, HALL_DOOR_UUID, HOST_EXTENT_PAD_M,
+    HOST_PLANE_MAX_M, HOST_UNRESOLVED, ROOMPLAN_EQUIPMENT_SIGMA_MM, ROOMPLAN_SURFACE_SIGMA_MM,
 };
 pub use cid::Cid;
 pub use crypto::{

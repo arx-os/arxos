@@ -58,7 +58,8 @@ impl BuildingRepository {
     /// Ingest RoomPlan geometry as Facts, stage them, and return CIDs.
     ///
     /// Surfaces that RoomPlan labels door/window/opening become [`Opening`]
-    /// Facts hosted on the nearest wall. Apple UUIDs become stable
+    /// Facts hosted on a wall (plane + padded-extent heuristic; unresolved
+    /// hosts stay `None`). Apple UUIDs become stable
     /// [`crate::entity::EntityId`]s (`rp:` + lowercase uuid).
     pub fn ingest_room_plan(
         &mut self,

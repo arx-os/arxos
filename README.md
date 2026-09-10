@@ -33,6 +33,7 @@ Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do 
 - Capture on a LiDAR iPhone (RoomPlan) or with `arx capture simulate` (wall Facts, σ = 40 mm)
 - Inspect the head, list entities (extent / σ / support), diagnostic scoring (`arx score`)
 - Fuse on commit: same Apple UUID / `EntityId` updates the wall instead of stacking walls
+- Opening host: wall plane + padded extent (0.35 m / 0.15 m); unresolved openings are not glued to a random wall
 - Realize solids and project IFC (`IFCWALL`), USD (cube prims), ASCII (`arx building slice`)
 - LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
 - Merge concurrent controller tips (entity conflicts fuse)
@@ -79,6 +80,7 @@ Init a building, start a RoomPlan scan, stop. Facts are ingested. With a join
 ticket, the app **pushes** staged Facts to the building inbox (status: facts
 pushed, pending apply). Without a ticket, local auto-commit remains force-quit
 safety; **Export store…** is Advanced/debug, not the field loop.
+Two-stop field proof: [docs/field/ROOM_WALK.md](docs/field/ROOM_WALK.md).
 Details: [ios/README.md](ios/README.md).
 
 Locator (name is discovery; trust is pinned keys, not DNS/IP):

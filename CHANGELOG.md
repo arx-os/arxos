@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Internals
+
+- `SIGMA_EXCLUDE_MM` lives in `core::measure` (Fact layer). Scoring no longer
+  imports `realize`. `realize` and `arxos_core::SIGMA_EXCLUDE_MM` re-export
+  the same 500 mm law.
+- RoomPlan host heuristic and hall fixtures extracted to `capture::host` and
+  `capture::fixtures`. Mapping stays in `capture::roomplan`. Public paths
+  through `roomplan::*` are unchanged.
+
 ## 0.2.0 - 2026-09-10
 
 Complete capture → inbox → fuse → realize v2 → export loop on a developer

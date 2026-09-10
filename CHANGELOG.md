@@ -6,16 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
-### Scoring (diagnostic)
-
-- Policy v2: `support_count` bonus, penalty for unresolved opening hosts, penalty
-  when \(\sigma > 500\) mm. `ScoreReport.policy_version` is 2. Same store +
-  root + policy → same report. Still `diagnostic_only`; not payroll.
-
 ## 0.2.0 - 2026-09-10
 
 Complete capture → inbox → fuse → realize v2 → export loop on a developer
-machine (simulate fixtures; field walk is out of band).
+machine (simulate fixtures; field walk is out of band). Scoring policy v2 is
+part of this cut (`policy_version = 2`, still diagnostic).
 
 ### Edge
 
@@ -23,6 +18,12 @@ machine (simulate fixtures; field walk is out of band).
   (read-only). Serve writes `$STORE/meta/serve.ticket` (0600) and does not
   print the full ticket to stdout (systemd journals). Apply does not restart
   the unit. Backup: copy the store while serve is stopped.
+
+### Scoring (diagnostic)
+
+- Policy v2: `support_count` bonus, penalty for unresolved opening hosts, penalty
+  when \(\sigma > 500\) mm. `ScoreReport.policy_version` is 2. Same store +
+  root + policy → same report. Still `diagnostic_only`; not payroll.
 
 ### Thin client
 

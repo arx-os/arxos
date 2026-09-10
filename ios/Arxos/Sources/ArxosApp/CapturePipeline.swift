@@ -136,8 +136,8 @@ final class RoomPlanCapturePipeline: NSObject, RoomCaptureSessionDelegate {
                 }
 
                 // Stable category strings for equipment_kind / CIDs (never String(describing:)).
-                // Doors/windows/openings above are Surfaces with surface_kind (not Opening objects) —
-                // intentional Phase-0 mapping; see docs/design/ios-field-loop.md if present.
+                // `identifier.uuidString` is the Apple UUID; core maps it to EntityId
+                // `rp:` + lowercase uuid. Doors/windows/openings become Opening Facts.
                 func roomPlanObjectCategory(_ category: CapturedRoom.Object.Category) -> String {
                     switch category {
                     case .storage: return "storage"

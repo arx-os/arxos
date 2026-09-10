@@ -122,7 +122,7 @@ pub fn run(cli: &Cli, command: CaptureCommands) -> Result<()> {
         } => {
             let bid = BuildingId::from_str(&building_id)?;
             let mut repo = BuildingRepository::open(&cli.store, &bid)?;
-            let geom = arxos_core::hall_four_walls([dx, 0.0, dz], sigma_mm);
+            let geom = arxos_core::hall_four_walls_with_door([dx, 0.0, dz], sigma_mm);
             let created = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs())
@@ -135,6 +135,7 @@ pub fn run(cli: &Cli, command: CaptureCommands) -> Result<()> {
             let staged = repo.ingest_mapped_roomplan(mapped)?;
             println!("space={}", staged.space);
             println!("surfaces={}", staged.surfaces.len());
+            println!("openings={}", staged.openings.len());
             let ann = repo.capture_annotation(&AnnotationCapture::new(
                 text,
                 Pose {

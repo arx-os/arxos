@@ -17,10 +17,31 @@ use crate::repository::BuildingRepository;
 
 /// Relative path of the control socket under the store root.
 pub const SERVE_SOCK_REL: &str = "meta/serve.sock";
+/// Relative path of the serve dial ticket (mode 0600). Prefer this over
+/// journaling the full ticket from systemd stdout.
+pub const SERVE_TICKET_REL: &str = "meta/serve.ticket";
 
 /// `$STORE/meta/serve.sock`
 pub fn serve_sock_path(store_root: impl AsRef<Path>) -> PathBuf {
     store_root.as_ref().join(SERVE_SOCK_REL)
+}
+
+/// `$STORE/meta/serve.ticket`
+pub fn serve_ticket_path(store_root: impl AsRef<Path>) -> PathBuf {
+    store_root.as_ref().join(SERVE_TICKET_REL)
+}
+
+/// Write the Iroh dial ticket (0600). Do not treat stdout as the ticket store.
+pub fn write_serve_ticket(store_root: impl AsRef<Path>, ticket: &str) -> Result<PathBuf> {
+    let path = serve_ticket_path(store_root);
+    crate::store::atomic_write(&path, ticket.as_bytes())?;
+    #[cfg(unix)]
+    {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+    }
+    Ok(path)
 }
 
 /// One control request (JSON line).

@@ -34,6 +34,7 @@ final class BuildingSession: ObservableObject {
         // Restore last building after force-quit if still present on disk.
         if let last = UserDefaults.standard.string(forKey: Self.lastBuildingKey), !last.isEmpty {
             openBuilding(id: last, quiet: true)
+            retryPushIfNeeded()
         }
     }
 
@@ -257,20 +258,49 @@ final class BuildingSession: ObservableObject {
                         peerTicket: ticket
                     )
                     hasUncommittedStaging = false
+                    summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
                     status = "Facts pushed, pending apply (accepted \(pushed.accepted))"
                     refreshNearby()
                     return
                 } catch {
-                    status = "Push failed: \(error.localizedDescription); falling back to local commit"
+                    // Pending stays on disk (store policy: excluded from backup).
+                    // Do not local-commit: official S lives on the edge.
+                    status = "Push queued (retry): \(error.localizedDescription)"
+                    refreshNearby()
+                    return
                 }
             }
             if autoCommit {
                 commit(message: "roomplan facts")
+                if lastError == nil {
+                    status = "local only (no ticket)"
+                }
             } else {
                 refreshNearby()
             }
         } catch {
             report(error)
+        }
+    }
+
+    /// Retry a queued push after force-quit. Staging is `record.pending` on disk.
+    private func retryPushIfNeeded() {
+        guard let id = buildingId,
+              let ticket = UserDefaults.standard.string(forKey: Self.joinTicketKey),
+              !ticket.isEmpty,
+              let s = summary, s.stagedCount > 0
+        else { return }
+        do {
+            let pushed = try ArxosCore.pushStaged(
+                storePath: storePath,
+                buildingId: id,
+                peerTicket: ticket
+            )
+            hasUncommittedStaging = false
+            summary = try ArxosCore.openBuilding(storePath: storePath, buildingId: id)
+            status = "Facts pushed, pending apply (accepted \(pushed.accepted))"
+        } catch {
+            status = "Push queued (retry): \(error.localizedDescription)"
         }
     }
 

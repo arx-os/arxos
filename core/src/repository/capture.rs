@@ -58,7 +58,8 @@ impl BuildingRepository {
     /// Ingest RoomPlan geometry as Facts, stage them, and return CIDs.
     ///
     /// Surfaces that RoomPlan labels door/window/opening become [`Opening`]
-    /// Facts hosted on the nearest wall. Apple UUIDs become stable
+    /// Facts hosted on a wall (plane + padded-extent heuristic; unresolved
+    /// hosts stay `None`). Apple UUIDs become stable
     /// [`crate::entity::EntityId`]s (`rp:` + lowercase uuid).
     pub fn ingest_room_plan(
         &mut self,
@@ -118,6 +119,25 @@ impl BuildingRepository {
     /// Put and stage any captured object directly into the repository.
     pub fn stage_captured_object(&mut self, obj: Object) -> Result<CaptureResult> {
         self.put_staged(obj)
+    }
+
+    /// Drop staged CIDs after a successful `PushFactsOk`. Bytes stay in the CAS.
+    ///
+    /// Official history still only moves on inbox apply. This is the thin-client
+    /// ACK: the working set / pending list is no longer needed locally.
+    pub fn clear_staged_after_push(&mut self, cids: &[crate::cid::Cid]) -> Result<u64> {
+        self.require_write()?;
+        let mut n = 0u64;
+        for cid in cids {
+            if self.record.pending.remove(cid) {
+                n += 1;
+            }
+            self.working_set.unstaged(cid);
+        }
+        self.record.updated = now_secs();
+        Self::write_record(self.store.root(), &self.record)?;
+        crate::inbox::clear_push_retry(self.store.root(), self.building_id())?;
+        Ok(n)
     }
 
     /// Stage an object CID for removal on the next commit.

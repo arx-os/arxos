@@ -54,9 +54,10 @@ pub use capture::{
     PointCloudCapture, SpaceCapture,
 };
 pub use capture::roomplan::{
-    entity_id_from_roomplan_uuid, hall_four_walls, map_roomplan, space_entity_id_from_surface_ids,
-    MappedRoomPlan, RoomPlanGeometry, RoomPlanObject, RoomPlanSurface, ROOMPLAN_EQUIPMENT_SIGMA_MM,
-    ROOMPLAN_SURFACE_SIGMA_MM,
+    entity_id_from_roomplan_uuid, hall_four_walls, hall_four_walls_with_door, map_roomplan,
+    resolve_opening_host, space_entity_id_from_surface_ids, MappedRoomPlan, RoomPlanGeometry,
+    RoomPlanObject, RoomPlanSurface, WallHostCandidate, HALL_DOOR_UUID, HOST_EXTENT_PAD_M,
+    HOST_PLANE_MAX_M, HOST_UNRESOLVED, ROOMPLAN_EQUIPMENT_SIGMA_MM, ROOMPLAN_SURFACE_SIGMA_MM,
 };
 pub use cid::Cid;
 pub use crypto::{
@@ -68,10 +69,14 @@ pub use entity::{
 };
 pub use fuse::{fuse, fuse_active_set};
 pub use ctl::{
-    ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, spawn_serve_ctl, wake_ctl,
-    CtlReply, CtlRequest, ServeSockGuard, SERVE_SOCK_REL,
+    ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, serve_ticket_path,
+    spawn_serve_ctl, wake_ctl, write_serve_ticket, CtlReply, CtlRequest, ServeSockGuard,
+    SERVE_SOCK_REL, SERVE_TICKET_REL,
 };
-pub use inbox::{inbox_add, inbox_path, load_inbox, InboxAdd, InboxEntry, InboxFile};
+pub use inbox::{
+    clear_push_retry, inbox_add, inbox_path, load_inbox, load_push_retry, save_push_retry,
+    InboxAdd, InboxEntry, InboxFile, PushRetryFile,
+};
 pub use locator::BuildingLocator;
 pub use realize::{
     ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM,
@@ -137,7 +142,7 @@ mod tests {
     fn hello_smoke() {
         let s = hello("Phase0".into());
         assert!(s.contains("Phase0"));
-        assert!(s.contains("0.1.0"));
+        assert!(s.contains(&version()));
     }
 
     #[test]

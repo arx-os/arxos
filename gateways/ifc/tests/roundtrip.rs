@@ -14,8 +14,12 @@ fn ifc_roundtrip_identity() {
     let dir = tempdir().unwrap();
     let path = dir.path();
     let kp = Keypair::generate();
-    let mut repo =
-        BuildingRepository::init(path, Some("IFC Hall".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("IFC Hall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
     let bid = repo.building_id().clone();
 
     let floor = Object::new(ObjectBody::Floor(FloorBody {
@@ -29,7 +33,7 @@ fn ifc_roundtrip_identity() {
     let floor_cid = repo.put_object(&floor).unwrap();
 
     repo.capture_space(&SpaceCapture {
-                    entity_id: None,
+        entity_id: None,
         name: Some("Mech".into()),
         pose: Pose {
             position: [1.0, 0.0, 2.0],
@@ -87,7 +91,10 @@ fn ifc_roundtrip_identity() {
             break;
         }
     }
-    assert!(found_source, "expected arxos_source_cid on imported objects");
+    assert!(
+        found_source,
+        "expected arxos_source_cid on imported objects"
+    );
 }
 
 #[test]
@@ -96,11 +103,8 @@ fn ifc_unsigned_import_refused() {
     let path = dir.path();
     let mut repo = BuildingRepository::init(path, Some("IFC Hall".into()), None).unwrap();
     let bid = repo.building_id().clone();
-    repo.capture_annotation(&AnnotationCapture::new(
-        "note",
-        Pose::default(),
-    ))
-    .unwrap();
+    repo.capture_annotation(&AnnotationCapture::new("note", Pose::default()))
+        .unwrap();
     let _ = repo.commit(Some("src".into())).unwrap();
     drop(repo);
 
@@ -158,4 +162,44 @@ fn ifc_wall_fact_emits_ifcwall() {
     assert!(ifc.contains("EntityId") || ifc.contains("rp:wall-export-1"));
     assert!(ifc.contains("Pset_ArxosMeasure"));
     assert!(ifc.contains("IFCEXTRUDEDAREASOLID"));
+}
+
+#[test]
+fn ifc_hall_door_emits_void_relationship() {
+    use arxos_core::capture::roomplan::{hall_four_walls_with_door, map_roomplan};
+
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let kp = Keypair::generate();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("Hall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
+    let bid = repo.building_id().clone();
+    let mapped = map_roomplan(&hall_four_walls_with_door([0.0, 0.0, 0.0], 40.0), 1).unwrap();
+    repo.ingest_mapped_roomplan(mapped).unwrap();
+    repo.commit(Some("hall+door".into())).unwrap();
+    drop(repo);
+
+    let ifc = export_building_ifc(path, &bid, &ExportOptions::default()).unwrap();
+    assert!(ifc.contains("ViewDefinition [ArxosAsBuiltView]"));
+    assert!(!ifc.contains("CoordinationView"));
+    assert!(
+        ifc.contains("IFCWALL"),
+        "missing IFCWALL:\n{}",
+        &ifc[..ifc.len().min(1500)]
+    );
+    assert!(
+        ifc.contains("IFCDOOR") || ifc.contains("IFCOPENINGELEMENT"),
+        "missing door/opening:\n{}",
+        &ifc[..ifc.len().min(2000)]
+    );
+    assert!(
+        ifc.contains("IFCRELVOIDSELEMENT"),
+        "missing void relationship:\n{}",
+        &ifc[..ifc.len().min(2500)]
+    );
+    assert!(ifc.contains("EntityId") || ifc.contains("rp:"));
 }

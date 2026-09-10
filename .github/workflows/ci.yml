@@ -10,6 +10,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.91.0
+        with:
+          components: clippy
+      - name: clippy (arxos-core)
+        run: cargo clippy --locked -p arxos-core -- -D warnings
       - name: arxos-core
         run: cargo test --locked -p arxos-core
       - name: gateways

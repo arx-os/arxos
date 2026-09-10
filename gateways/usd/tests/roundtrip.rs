@@ -15,8 +15,12 @@ fn usd_roundtrip_identity() {
     let dir = tempdir().unwrap();
     let path = dir.path();
     let kp = Keypair::generate();
-    let mut repo =
-        BuildingRepository::init(path, Some("USD Hall".into()), Some(Keypair::from_seed(*kp.seed()))).unwrap();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("USD Hall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
     let bid = repo.building_id().clone();
 
     // Floor + space + annotation
@@ -32,7 +36,7 @@ fn usd_roundtrip_identity() {
     // stage floor by putting into pending via capture_space path — use raw put + pending
     // Through capture APIs:
     repo.capture_space(&SpaceCapture {
-                    entity_id: None,
+        entity_id: None,
         name: Some("Room A".into()),
         pose: Pose {
             position: [2.0, 0.0, 3.0],
@@ -76,7 +80,9 @@ fn usd_roundtrip_identity() {
     let usda = export_building_usda(path, &bid, &ExportOptions::default()).unwrap();
     assert!(usda.contains("#usda 1.0"));
     assert!(usda.contains("arxos:cid"));
-    assert!(usda.contains("panel note") || usda.contains("panel_note") || usda.contains("arxos:text"));
+    assert!(
+        usda.contains("panel note") || usda.contains("panel_note") || usda.contains("arxos:text")
+    );
 
     let dir2 = tempdir().unwrap();
     let imp = import_usda(dir2.path(), &usda, Some(&kp)).unwrap();
@@ -89,8 +95,8 @@ fn usd_roundtrip_identity() {
     );
 
     // Re-export and check identity props survive
-    let usda2 = export_building_usda(dir2.path(), &imp.building_id, &ExportOptions::default())
-        .unwrap();
+    let usda2 =
+        export_building_usda(dir2.path(), &imp.building_id, &ExportOptions::default()).unwrap();
     assert!(usda2.contains("arxos:buildingId"));
     assert!(usda2.contains(bid.as_str()));
 }
@@ -133,7 +139,37 @@ fn usd_wall_prim_for_entity() {
     let usda = export_building_usda(path, &bid, &ExportOptions::default()).unwrap();
     assert!(usda.contains("def Cube"), "expected Cube prim:\n{usda}");
     assert!(
-        usda.contains("rp:wall-usd-1") || usda.contains("wall_usd_1") || usda.contains("arxos:entityId"),
+        usda.contains("rp:wall-usd-1")
+            || usda.contains("wall_usd_1")
+            || usda.contains("arxos:entityId"),
         "expected wall entity on prim:\n{usda}"
+    );
+}
+
+#[test]
+fn usd_hall_door_emits_void_metadata() {
+    use arxos_core::capture::roomplan::{hall_four_walls_with_door, map_roomplan};
+
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let kp = Keypair::generate();
+    let mut repo = BuildingRepository::init(
+        path,
+        Some("USD Hall".into()),
+        Some(Keypair::from_seed(*kp.seed())),
+    )
+    .unwrap();
+    let bid = repo.building_id().clone();
+    let mapped = map_roomplan(&hall_four_walls_with_door([0.0, 0.0, 0.0], 40.0), 1).unwrap();
+    repo.ingest_mapped_roomplan(mapped).unwrap();
+    repo.commit(Some("hall+door".into())).unwrap();
+    drop(repo);
+
+    let usda = export_building_usda(path, &bid, &ExportOptions::default()).unwrap();
+    assert!(usda.contains("def Cube"));
+    assert!(usda.contains("arxos:entityId") || usda.contains("arxos:cid"));
+    assert!(
+        usda.contains("arxos:voids") || usda.contains("arxos:hostEntity"),
+        "expected void/host metadata:\n{usda}"
     );
 }

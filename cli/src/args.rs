@@ -136,7 +136,9 @@ pub enum ExportCommands {
         #[arg(long)]
         no_points: bool,
     },
-    /// Export building head as IFC4 STEP (identity + labels; not a certified CoordinationView)
+    /// Export building head as IFC4 STEP (ArxosAsBuiltView; not CoordinationView).
+    ///
+    /// Realize v2: walls + hosted voids. No sloped slabs, no curtain wall.
     Ifc {
         building_id: String,
         #[arg(long, short)]
@@ -529,7 +531,7 @@ pub enum CaptureCommands {
         #[arg(long)]
         quiet: bool,
     },
-    /// Simulate RoomPlan-equivalent wall Facts (4×4 m hall) + a note
+    /// Simulate RoomPlan-equivalent wall + door Facts (4×4 m hall) + a note
     Simulate {
         building_id: String,
         #[arg(long, default_value = "Simulated Room")]
@@ -696,7 +698,11 @@ mod tests {
         use clap::CommandFactory;
         let mut cmd = Cli::command();
         let mut buf = Vec::new();
-        let fetch = cmd.find_subcommand_mut("net").unwrap().find_subcommand_mut("fetch").unwrap();
+        let fetch = cmd
+            .find_subcommand_mut("net")
+            .unwrap()
+            .find_subcommand_mut("fetch")
+            .unwrap();
         fetch.write_long_help(&mut buf).unwrap();
         let help = String::from_utf8(buf).unwrap();
         assert!(

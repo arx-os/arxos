@@ -43,6 +43,8 @@ enum Commands {
         #[arg(long)]
         project_name: Option<String>,
     },
+    /// Read-only health: lock, sock, inbox pending, head CID. No writer.
+    Status,
     /// Run as long-lived edge node: exclusive store lock + Iroh serve (+ optional mDNS).
     ///
     /// Holds the store write lock for the process lifetime so CLI writers on the
@@ -106,9 +108,43 @@ fn main() -> Result<()> {
             fs::write(&out, &ifc).with_context(|| format!("write {}", out.display()))?;
             println!("wrote {} bytes to {}", ifc.len(), out.display());
         }
+        Commands::Status => {
+            print_status(&cli.store)?;
+        }
         Commands::Serve { mdns, instance } => {
             run_serve(cli.store, mdns, instance)?;
         }
+    }
+    Ok(())
+}
+
+fn print_status(store_path: &std::path::Path) -> Result<()> {
+    let store = ObjectStore::open(store_path).context("open store")?;
+    let lock_status = match store.try_lock_exclusive() {
+        Ok(_g) => "available",
+        Err(_) => "held",
+    };
+    let sock = arxos_core::serve_sock_path(store_path);
+    let ticket = arxos_core::serve_ticket_path(store_path);
+    println!("store={}", store_path.display());
+    println!("store_lock={lock_status}");
+    println!("ctl_sock={}", sock.display());
+    println!("ctl_sock_present={}", sock.exists());
+    println!("ticket_file={}", ticket.display());
+    println!("ticket_file_present={}", ticket.exists());
+    let list = BuildingRepository::list_buildings(store_path).unwrap_or_default();
+    println!("buildings={}", list.len());
+    for r in list {
+        let pending = arxos_core::load_inbox(store_path, &r.building_id)
+            .map(|f| f.pending.len())
+            .unwrap_or(0);
+        println!(
+            "  {}  head={}  inbox_pending={pending}",
+            r.building_id,
+            r.head_root
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "none".into())
+        );
     }
     Ok(())
 }
@@ -159,10 +195,14 @@ async fn serve_async(store_path: PathBuf, mdns: bool, instance: Option<String>) 
     );
     let ticket = node.ticket().await.context("ticket")?;
     let peer = node.peer_id().to_string();
+    let ticket_path = arxos_core::write_serve_ticket(&store_path, &ticket)
+        .context("write meta/serve.ticket")?;
     println!("arxos-edge serve");
     println!("  store={}", store_path.display());
     println!("  peer={peer}");
-    println!("  ticket={ticket}");
+    println!("  ticket_file={}", ticket_path.display());
+    println!("  ticket_len={}", ticket.len());
+    println!("  note=full ticket is in ticket_file (0600); do not journal it");
 
     let ads = arxos_networking::building_ads_from_store(&store_path).unwrap_or_default();
     node.set_buildings(ads.clone()).await;

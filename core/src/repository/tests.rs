@@ -267,6 +267,24 @@ fn pending_survives_reopen_then_commit() {
 }
 
 #[test]
+fn clear_staged_after_push_drops_pending_not_cas() {
+    let dir = tempdir().unwrap();
+    let mut repo = BuildingRepository::init(dir.path(), Some("PushAck".into()), None).unwrap();
+    let res = repo
+        .capture_annotation(&AnnotationCapture::new("note", Pose::default()))
+        .unwrap();
+    let cid = res.cid;
+    assert!(repo.record().pending.contains(&cid));
+    let n = repo.clear_staged_after_push(&[cid]).unwrap();
+    assert_eq!(n, 1);
+    assert!(repo.record().pending.is_empty());
+    assert!(repo.get_object(&cid).is_ok(), "CAS bytes remain after ACK");
+    assert!(crate::load_push_retry(dir.path(), repo.building_id())
+        .unwrap()
+        .is_none());
+}
+
+#[test]
 fn test_adopt_root_validation() {
     let dir = tempdir().unwrap();
     let path = dir.path();

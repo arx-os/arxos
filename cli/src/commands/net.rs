@@ -69,6 +69,10 @@ pub async fn run(cli: &Cli, command: NetCommands) -> Result<()> {
             );
             node.refresh_buildings().await?;
             let ticket = node.ticket().await?;
+            match arxos_core::write_serve_ticket(&cli.store, &ticket) {
+                Ok(p) => println!("ticket_file={}", p.display()),
+                Err(e) => eprintln!("warning: could not write serve.ticket: {e}"),
+            }
             println!("peer_id={}", node.peer_id());
             println!("ticket={ticket}");
             println!("store={}", cli.store.display());
@@ -202,15 +206,40 @@ pub async fn run(cli: &Cli, command: NetCommands) -> Result<()> {
             let node = IrohNode::bind(&cli.store)
                 .await
                 .with_context(|| format!("bind iroh on {}", cli.store.display()))?;
-            let res = push_facts(&node, &ticket, &bid, &objects, &leaves, &author).await?;
+            let push_res = push_facts(&node, &ticket, &bid, &objects, &leaves, &author).await;
             node.close().await;
-            println!("building_id={}", res.building_id);
-            println!("put_ok={} put_rejected={}", res.put_ok, res.put_rejected);
-            println!("accepted={}", res.accepted.len());
-            println!("duplicate={}", res.duplicate.len());
-            println!("rejected={}", res.rejected.len());
-            for r in &res.rejected {
-                println!("  reject {} {}", r.cid, r.reason);
+            match push_res {
+                Ok(res) => {
+                    println!("building_id={}", res.building_id);
+                    println!("put_ok={} put_rejected={}", res.put_ok, res.put_rejected);
+                    println!("accepted={}", res.accepted.len());
+                    println!("duplicate={}", res.duplicate.len());
+                    println!("rejected={}", res.rejected.len());
+                    for r in &res.rejected {
+                        println!("  reject {} {}", r.cid, r.reason);
+                    }
+                    let incomplete = res.put_rejected > 0 || !res.rejected.is_empty();
+                    if staged && !incomplete {
+                        match BuildingRepository::open(&cli.store, &bid_parsed) {
+                            Ok(mut w) => {
+                                let n = w.clear_staged_after_push(&leaf)?;
+                                println!("staging_cleared={n}");
+                            }
+                            Err(e) => {
+                                eprintln!("warning: PushFactsOk but could not clear staging: {e}");
+                            }
+                        }
+                    } else if staged {
+                        let _ = arxos_core::save_push_retry(&cli.store, &bid_parsed, &leaf);
+                        println!("staging=queued (retry with net push --staged)");
+                    }
+                }
+                Err(e) => {
+                    if staged {
+                        let _ = arxos_core::save_push_retry(&cli.store, &bid_parsed, &leaf);
+                    }
+                    return Err(e.into());
+                }
             }
         }
         NetCommands::Fetch {

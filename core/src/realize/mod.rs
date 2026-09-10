@@ -1,8 +1,9 @@
 //! Realization \( B = R(S) \): Facts → solids (still not pixels).
 //!
-//! Read-only. v1 extrudes pose + extent into oriented boxes. There is no
-//! plane–plane CSG; openings are separate boxes plus a host id so IFC can
-//! emit `IfcRelVoidsElement`.
+//! Read-only. v1 extrudes pose + extent into oriented boxes. v2 clips wall
+//! rectangles by neighboring non-parallel planes and lists hosted openings
+//! as `voids`. If clip/subtract fails, the v1 box is kept — a wall is never
+//! dropped because CSG was sad. ASCII occupancy may use boxes.
 //!
 //! # Coordinate frame
 //!
@@ -28,6 +29,9 @@ use crate::entity::EntityId;
 use crate::error::Result;
 use crate::object::{ObjectBody, ObjectType, Pose};
 use crate::state::BuildingState;
+
+mod clip;
+pub use clip::{world_outline, CLIP_MIN_VERTS, NEIGHBOR_VERTICAL_MAX_M, PARALLEL_DOT};
 
 /// Skip solids looser than this 1σ (millimetres).
 pub const SIGMA_EXCLUDE_MM: f64 = 500.0;
@@ -67,8 +71,13 @@ pub struct Solid {
     pub cid: crate::cid::Cid,
     pub kind: SolidKind,
     pub pose: Pose,
+    /// v1 box extents `[width, height, thickness]` (meters). Always present.
     pub extent: [f64; 3],
+    /// Local-XY polygon when v2 clipping succeeded (≥ 3 vertices).
+    pub outline_xy: Option<Vec<[f64; 2]>>,
     pub host: Option<EntityId>,
+    /// Openings hosted on this solid (realize v2). Empty for non-walls.
+    pub voids: Vec<EntityId>,
     /// Run polyline (building-local meters). Empty for boxes.
     pub points: Vec<[f64; 3]>,
     pub radius_m: f64,
@@ -89,10 +98,7 @@ pub fn high_sigma_skip_count(state: &BuildingState) -> u64 {
         .filter(|(_, obj)| {
             matches!(
                 obj.header.object_type,
-                ObjectType::Surface
-                    | ObjectType::Opening
-                    | ObjectType::Equipment
-                    | ObjectType::Run
+                ObjectType::Surface | ObjectType::Opening | ObjectType::Equipment | ObjectType::Run
             ) && obj
                 .sigma_mm()
                 .map(|s| s > SIGMA_EXCLUDE_MM)
@@ -128,7 +134,9 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
                     "floor" | "slab" | "ceiling" => SolidKind::Slab,
                     _ => SolidKind::Wall,
                 };
-                let mut extent = obj.extent().unwrap_or([1.0, 1.0, default_thickness(solid_kind)]);
+                let mut extent = obj
+                    .extent()
+                    .unwrap_or([1.0, 1.0, default_thickness(solid_kind)]);
                 if extent[2] == 0.0 {
                     extent[2] = default_thickness(solid_kind);
                 }
@@ -138,7 +146,9 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
                     kind: solid_kind,
                     pose,
                     extent,
+                    outline_xy: None,
                     host: None,
+                    voids: Vec::new(),
                     points: Vec::new(),
                     radius_m: 0.0,
                 });
@@ -154,7 +164,9 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
                     kind: SolidKind::Opening,
                     pose,
                     extent,
+                    outline_xy: None,
                     host: b.host_entity.clone(),
+                    voids: Vec::new(),
                     points: Vec::new(),
                     radius_m: 0.0,
                 });
@@ -170,7 +182,9 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
                     kind: SolidKind::Equipment,
                     pose,
                     extent,
+                    outline_xy: None,
                     host: None,
+                    voids: Vec::new(),
                     points: Vec::new(),
                     radius_m: 0.0,
                 });
@@ -188,7 +202,9 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
                     kind: SolidKind::Run,
                     pose,
                     extent: obj.extent().unwrap_or([0.0, 0.0, 0.0]),
+                    outline_xy: None,
                     host: None,
+                    voids: Vec::new(),
                     points: b.points.clone(),
                     radius_m: radius,
                 });
@@ -207,6 +223,8 @@ pub fn realize(state: &BuildingState) -> Result<Realization> {
             _ => {}
         }
     }
+    out.solids.sort_by(|a, b| a.entity_id.cmp(&b.entity_id));
+    clip::apply_v2(&mut out);
     out.solids.sort_by(|a, b| a.entity_id.cmp(&b.entity_id));
     out.spaces.sort_by(|a, b| a.0.cmp(&b.0));
     out.notes.sort_by(|a, b| a.0.cmp(&b.0));
@@ -399,7 +417,12 @@ mod tests {
 
     #[test]
     fn identity_pose_wall_normal_is_plus_z() {
-        let w = wall_at("w", [0.0, 1.25, 0.0], [4.0, 2.5, 0.15], [0.0, 0.0, 0.0, 1.0]);
+        let w = wall_at(
+            "w",
+            [0.0, 1.25, 0.0],
+            [4.0, 2.5, 0.15],
+            [0.0, 0.0, 0.0, 1.0],
+        );
         let n = w.pose().unwrap().local_z();
         assert!((n[0]).abs() < 1e-9);
         assert!((n[1]).abs() < 1e-9);
@@ -479,7 +502,10 @@ mod tests {
         let rows: Vec<&str> = norm.lines().collect();
         assert!(rows.len() >= 4, "{norm}");
         let mid = rows[rows.len() / 2];
-        assert!(mid.contains('.'), "mid row should have empty interior: {mid}");
+        assert!(
+            mid.contains('.'),
+            "mid row should have empty interior: {mid}"
+        );
         assert!(mid.contains('#'), "mid row should still hit walls: {mid}");
     }
 }

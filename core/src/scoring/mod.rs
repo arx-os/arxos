@@ -15,8 +15,9 @@
 //!
 //! # Safety
 //!
-//! **Diagnostic only** (type-count weights). Do not use as a payment basis
-//! until multi-signal quality scoring is intentional product work.
+//! **Diagnostic only.** Policy v2 adds `support_count`, unresolved-host, and
+//! high-\(\sigma\) terms. Do not treat the number as payroll. Settlement stays
+//! fiat, off-band. No currency in CIDs.
 //!
 //! # Future scoring extensions (data plane only)
 //!
@@ -37,10 +38,11 @@ use crate::store::ObjectRead;
 /// Policy version embedded in every report for offline replay.
 ///
 /// Bump when weight tables or aggregation rules change in a breaking way.
-pub const DEFAULT_POLICY_VERSION: u32 = 1;
+/// v1: type-count + signed bonus. v2: plus support / unresolved host / high σ.
+pub const DEFAULT_POLICY_VERSION: u32 = 2;
 
 /// One attributed contribution unit (usually a signed object or root).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Contribution {
     pub cid: Cid,
     pub object_type: ObjectType,
@@ -50,6 +52,15 @@ pub struct Contribution {
     pub signature_valid: bool,
     /// Optional device id from provenance linkage.
     pub device_id: Option<String>,
+    /// Effective support observations on a Fact (0 when the object is not a Fact).
+    #[serde(default)]
+    pub support_count: u32,
+    /// 1σ millimetres when present on a Fact.
+    #[serde(default)]
+    pub sigma_mm: Option<f64>,
+    /// Opening with no `host_entity` (property `host=unresolved`).
+    #[serde(default)]
+    pub unresolved_host: bool,
 }
 
 /// Aggregate score for a contributor (public key or anonymous bucket).
@@ -103,6 +114,25 @@ pub struct ScoreWeights {
     pub other: f64,
     /// Multiplier applied when signature verifies.
     pub signed_bonus: f64,
+    /// Extra points per supporting observation beyond the first (`support_count - 1`).
+    #[serde(default = "default_support_bonus")]
+    pub support_bonus: f64,
+    /// Subtracted when an Opening has no host wall.
+    #[serde(default = "default_unresolved_host_penalty")]
+    pub unresolved_host_penalty: f64,
+    /// Subtracted when Fact \(\sigma\) exceeds [`crate::realize::SIGMA_EXCLUDE_MM`].
+    #[serde(default = "default_high_sigma_penalty")]
+    pub high_sigma_penalty: f64,
+}
+
+fn default_support_bonus() -> f64 {
+    0.5
+}
+fn default_unresolved_host_penalty() -> f64 {
+    0.5
+}
+fn default_high_sigma_penalty() -> f64 {
+    0.5
 }
 
 impl Default for ScoreWeights {
@@ -116,6 +146,9 @@ impl Default for ScoreWeights {
             root: 0.5,
             other: 0.25,
             signed_bonus: 1.25,
+            support_bonus: default_support_bonus(),
+            unresolved_host_penalty: default_unresolved_host_penalty(),
+            high_sigma_penalty: default_high_sigma_penalty(),
         }
     }
 }
@@ -143,6 +176,21 @@ impl ScoringPolicy {
     pub fn with_weights(version: u32, weights: ScoreWeights) -> Self {
         Self { version, weights }
     }
+}
+
+fn quality_adjust(c: &Contribution, w: &ScoreWeights) -> f64 {
+    let extra = c.support_count.saturating_sub(1) as f64;
+    let mut adj = w.support_bonus * extra;
+    if c.unresolved_host {
+        adj -= w.unresolved_host_penalty;
+    }
+    if c.sigma_mm
+        .map(|s| s > crate::realize::SIGMA_EXCLUDE_MM)
+        .unwrap_or(false)
+    {
+        adj -= w.high_sigma_penalty;
+    }
+    adj
 }
 
 fn weight_for(ty: ObjectType, w: &ScoreWeights) -> f64 {
@@ -175,6 +223,7 @@ pub fn attribute_object(cid: Cid, obj: &Object) -> Contribution {
     } else {
         None
     };
+    let unresolved_host = matches!(&obj.body, ObjectBody::Opening(b) if b.host_entity.is_none());
     Contribution {
         cid,
         object_type: obj.header.object_type,
@@ -182,6 +231,9 @@ pub fn attribute_object(cid: Cid, obj: &Object) -> Contribution {
         created: obj.header.created,
         signature_valid,
         device_id,
+        support_count: obj.effective_support_count(),
+        sigma_mm: obj.sigma_mm(),
+        unresolved_host,
     }
 }
 
@@ -339,8 +391,12 @@ pub fn score_contributions_with_policy(
             }
         }
         let mut s = weight_for(c.object_type, weights);
+        s += quality_adjust(c, weights);
         if c.signature_valid {
             s *= weights.signed_bonus;
+        }
+        if s < 0.0 {
+            s = 0.0;
         }
         entry.score += s;
         total_score += s;
@@ -428,6 +484,9 @@ mod tests {
                     created: 100,
                     signature_valid: true,
                     device_id: None,
+                    support_count: 0,
+                    sigma_mm: None,
+                    unresolved_host: false,
                 },
                 Contribution {
                     cid: cids[1],
@@ -436,6 +495,9 @@ mod tests {
                     created: 101,
                     signature_valid: false,
                     device_id: None,
+                    support_count: 0,
+                    sigma_mm: None,
+                    unresolved_host: false,
                 },
                 Contribution {
                     cid: cids[2],
@@ -444,6 +506,9 @@ mod tests {
                     created: 102,
                     signature_valid: false,
                     device_id: None,
+                    support_count: 0,
+                    sigma_mm: None,
+                    unresolved_host: false,
                 },
             ]
         };
@@ -516,5 +581,105 @@ mod tests {
             &ScoringPolicy::with_weights(42, ScoreWeights::default()),
         );
         assert_eq!(report.policy_version, 42);
+    }
+
+    fn fact_contrib(
+        cid: Cid,
+        support_count: u32,
+        sigma_mm: Option<f64>,
+        unresolved_host: bool,
+    ) -> Contribution {
+        Contribution {
+            cid,
+            object_type: ObjectType::Opening,
+            author: None,
+            created: 1,
+            signature_valid: false,
+            device_id: None,
+            support_count,
+            sigma_mm,
+            unresolved_host,
+        }
+    }
+
+    #[test]
+    fn support_count_raises_score() {
+        let w = ScoreWeights::default();
+        let a = score_contributions(
+            vec![fact_contrib(Cid::from_bytes([1; 32]), 1, Some(40.0), false)],
+            None,
+            "b".into(),
+            &w,
+        );
+        let b = score_contributions(
+            vec![fact_contrib(Cid::from_bytes([2; 32]), 2, Some(40.0), false)],
+            None,
+            "b".into(),
+            &w,
+        );
+        assert!(
+            b.total_score > a.total_score,
+            "support 2 ({}) should beat support 1 ({})",
+            b.total_score,
+            a.total_score
+        );
+        assert_eq!(a.policy_version, DEFAULT_POLICY_VERSION);
+        assert_eq!(DEFAULT_POLICY_VERSION, 2);
+    }
+
+    #[test]
+    fn unresolved_host_and_high_sigma_penalize() {
+        let w = ScoreWeights::default();
+        let hosted = score_contributions(
+            vec![fact_contrib(Cid::from_bytes([1; 32]), 1, Some(40.0), false)],
+            None,
+            "b".into(),
+            &w,
+        );
+        let unresolved = score_contributions(
+            vec![fact_contrib(Cid::from_bytes([2; 32]), 1, Some(40.0), true)],
+            None,
+            "b".into(),
+            &w,
+        );
+        let loose = score_contributions(
+            vec![fact_contrib(
+                Cid::from_bytes([3; 32]),
+                1,
+                Some(crate::realize::SIGMA_EXCLUDE_MM + 1.0),
+                false,
+            )],
+            None,
+            "b".into(),
+            &w,
+        );
+        assert!(unresolved.total_score < hosted.total_score);
+        assert!(loose.total_score < hosted.total_score);
+        assert!(hosted.diagnostic_only);
+    }
+
+    #[test]
+    fn same_store_root_policy_same_report() {
+        use crate::capture::roomplan::{hall_four_walls_with_door, map_roomplan};
+        let dir = tempdir().unwrap();
+        let kp = Keypair::generate();
+        let mut repo = BuildingRepository::init(
+            dir.path(),
+            Some("Hall".into()),
+            Some(Keypair::from_seed(*kp.seed())),
+        )
+        .unwrap();
+        let mapped = map_roomplan(&hall_four_walls_with_door([0.0, 0.0, 0.0], 40.0), 1).unwrap();
+        repo.ingest_mapped_roomplan(mapped).unwrap();
+        let commit = repo.commit(Some("hall".into())).unwrap();
+        let policy = ScoringPolicy::default();
+        let a = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
+        let b = score_root_with_policy(&repo, &commit.root_cid, &policy).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(a.policy_version, 2);
+        assert!(a
+            .contributions
+            .iter()
+            .any(|c| { c.object_type == ObjectType::Opening && !c.unresolved_host }));
     }
 }

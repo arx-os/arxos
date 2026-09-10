@@ -75,14 +75,12 @@ fn project_root<R: ObjectRead + ?Sized>(
     opts: &ExportOptions,
 ) -> Result<UsdStage> {
     let mut stage = UsdStage::new();
-    stage.custom_layer_data.insert(
-        "arxosRootCid".into(),
-        root_cid.to_string(),
-    );
-    stage.custom_layer_data.insert(
-        "arxosBuildingId".into(),
-        root.building_id.to_string(),
-    );
+    stage
+        .custom_layer_data
+        .insert("arxosRootCid".into(), root_cid.to_string());
+    stage
+        .custom_layer_data
+        .insert("arxosBuildingId".into(), root.building_id.to_string());
     stage.custom_layer_data.insert(
         "arxosExporter".into(),
         format!("arxos-usd/{}", env!("CARGO_PKG_VERSION")),
@@ -99,10 +97,9 @@ fn project_root<R: ObjectRead + ?Sized>(
         attrs: BTreeMap::new(),
         metadata: BTreeMap::new(),
     };
-    building_prim.attrs.insert(
-        "arxos:type".into(),
-        UsdValue::String("building".into()),
-    );
+    building_prim
+        .attrs
+        .insert("arxos:type".into(), UsdValue::String("building".into()));
     building_prim.attrs.insert(
         "arxos:buildingId".into(),
         UsdValue::String(root.building_id.to_string()),
@@ -129,10 +126,8 @@ fn project_root<R: ObjectRead + ?Sized>(
                 // attach name to building prim
                 if let ObjectBody::Building(b) = &obj.body {
                     if let Some(last) = stage.prims.first_mut() {
-                        last.attrs.insert(
-                            "arxos:cid".into(),
-                            UsdValue::String(cid.to_string()),
-                        );
+                        last.attrs
+                            .insert("arxos:cid".into(), UsdValue::String(cid.to_string()));
                         if let Some(n) = &b.name {
                             last.attrs
                                 .insert("arxos:name".into(), UsdValue::String(n.clone()));
@@ -172,9 +167,7 @@ fn project_root<R: ObjectRead + ?Sized>(
             ObjectType::Annotation
             | ObjectType::PointCloudChunk
             | ObjectType::Sensor
-            | ObjectType::Fixture => {
-                other_parent_path(&building_path, obj, &spaces)
-            }
+            | ObjectType::Fixture => other_parent_path(&building_path, obj, &spaces),
             _ => building_path.clone(),
         };
         let path = format!("{parent}/{}", prim_name(obj, cid));
@@ -198,18 +191,14 @@ fn project_root<R: ObjectRead + ?Sized>(
             attrs: BTreeMap::new(),
             metadata: BTreeMap::new(),
         };
-        prim.attrs.insert(
-            "arxos:cid".into(),
-            UsdValue::String(solid.cid.to_string()),
-        );
+        prim.attrs
+            .insert("arxos:cid".into(), UsdValue::String(solid.cid.to_string()));
         prim.attrs.insert(
             "arxos:entityId".into(),
             UsdValue::String(solid.entity_id.to_string()),
         );
-        prim.attrs.insert(
-            "arxos:solidKind".into(),
-            UsdValue::String(kind.into()),
-        );
+        prim.attrs
+            .insert("arxos:solidKind".into(), UsdValue::String(kind.into()));
         prim.attrs.insert(
             "xformOp:translate".into(),
             UsdValue::Float3(solid.pose.position),
@@ -223,6 +212,20 @@ fn project_root<R: ObjectRead + ?Sized>(
                 UsdValue::String(host.to_string()),
             );
         }
+        if !solid.voids.is_empty() {
+            let voids = solid
+                .voids
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            prim.attrs
+                .insert("arxos:voids".into(), UsdValue::String(voids));
+        }
+        if solid.outline_xy.as_ref().is_some_and(|p| p.len() >= 3) {
+            prim.attrs
+                .insert("arxos:hasOutline".into(), UsdValue::String("true".into()));
+        }
         stage.prims.push(prim);
     }
 
@@ -233,7 +236,10 @@ fn prim_name(obj: &Object, cid: &Cid) -> String {
     let short = &cid.to_hex()[..8.min(cid.to_hex().len())];
     let kind = obj.header.object_type.as_str();
     let label = match &obj.body {
-        ObjectBody::Floor(b) => b.name.clone().unwrap_or_else(|| format!("Floor_{}", b.level_index)),
+        ObjectBody::Floor(b) => b
+            .name
+            .clone()
+            .unwrap_or_else(|| format!("Floor_{}", b.level_index)),
         ObjectBody::Space(b) => b.name.clone().unwrap_or_else(|| format!("Space_{short}")),
         ObjectBody::Annotation(b) => b
             .text
@@ -246,11 +252,7 @@ fn prim_name(obj: &Object, cid: &Cid) -> String {
     format!("{}_{}", sanitize_name(&label), short)
 }
 
-fn space_parent_path(
-    building_path: &str,
-    space: &Object,
-    floors: &[(Cid, Object)],
-) -> String {
+fn space_parent_path(building_path: &str, space: &Object, floors: &[(Cid, Object)]) -> String {
     if let ObjectBody::Space(s) = &space.body {
         if let Some(floor_cid) = s.floor {
             if let Some((_, fobj)) = floors.iter().find(|(c, _)| *c == floor_cid) {
@@ -261,11 +263,7 @@ fn space_parent_path(
     building_path.to_string()
 }
 
-fn other_parent_path(
-    building_path: &str,
-    obj: &Object,
-    spaces: &[(Cid, Object)],
-) -> String {
+fn other_parent_path(building_path: &str, obj: &Object, spaces: &[(Cid, Object)]) -> String {
     let space_ref = match &obj.body {
         ObjectBody::Annotation(a) => a.space,
         _ => None,
@@ -278,12 +276,7 @@ fn other_parent_path(
     building_path.to_string()
 }
 
-fn object_to_prim(
-    path: &str,
-    cid: &Cid,
-    obj: &Object,
-    opts: &ExportOptions,
-) -> Result<UsdPrim> {
+fn object_to_prim(path: &str, cid: &Cid, obj: &Object, opts: &ExportOptions) -> Result<UsdPrim> {
     let type_name = match obj.header.object_type {
         ObjectType::PointCloudChunk => "Points",
         ObjectType::Mesh => "Mesh",
@@ -299,10 +292,8 @@ fn object_to_prim(
         attrs: BTreeMap::new(),
         metadata: BTreeMap::new(),
     };
-    prim.attrs.insert(
-        "arxos:cid".into(),
-        UsdValue::String(cid.to_string()),
-    );
+    prim.attrs
+        .insert("arxos:cid".into(), UsdValue::String(cid.to_string()));
     prim.attrs.insert(
         "arxos:type".into(),
         UsdValue::String(obj.header.object_type.to_string()),
@@ -316,26 +307,19 @@ fn object_to_prim(
         UsdValue::String(obj.header.created.to_string()),
     );
     if let Some(eid) = arxos_core::entity::entity_id_of(obj) {
-        prim.attrs.insert(
-            "arxos:entityId".into(),
-            UsdValue::String(eid.to_string()),
-        );
+        prim.attrs
+            .insert("arxos:entityId".into(), UsdValue::String(eid.to_string()));
     }
 
     if let Some(pose) = extract_pose(obj) {
-        prim.attrs.insert(
-            "xformOp:translate".into(),
-            UsdValue::Float3(pose.position),
-        );
+        prim.attrs
+            .insert("xformOp:translate".into(), UsdValue::Float3(pose.position));
         // Quaternion as custom float4 for fidelity (USD xformOp:orient later).
         prim.attrs.insert(
             "arxos:orientation".into(),
             UsdValue::String(format!(
                 "{},{},{},{}",
-                pose.orientation[0],
-                pose.orientation[1],
-                pose.orientation[2],
-                pose.orientation[3]
+                pose.orientation[0], pose.orientation[1], pose.orientation[2], pose.orientation[3]
             )),
         );
     }
@@ -357,10 +341,8 @@ fn object_to_prim(
                     .insert("arxos:name".into(), UsdValue::String(n.clone()));
             }
             if let Some(b) = &s.bounds {
-                prim.attrs.insert(
-                    "extent".into(),
-                    UsdValue::Float3Array(vec![b.min, b.max]),
-                );
+                prim.attrs
+                    .insert("extent".into(), UsdValue::Float3Array(vec![b.min, b.max]));
             }
         }
         ObjectBody::Floor(f) => {
@@ -372,10 +354,8 @@ fn object_to_prim(
                 "arxos:levelIndex".into(),
                 UsdValue::String(f.level_index.to_string()),
             );
-            prim.attrs.insert(
-                "arxos:elevationM".into(),
-                UsdValue::Float(f.elevation_m),
-            );
+            prim.attrs
+                .insert("arxos:elevationM".into(), UsdValue::Float(f.elevation_m));
         }
         ObjectBody::PointCloudChunk(pc) if opts.include_point_clouds => {
             let mut pts = decode_xyz_f32_le(&pc.points);

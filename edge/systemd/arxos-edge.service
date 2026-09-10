@@ -8,7 +8,9 @@ Type=simple
 User=arxos
 Group=arxos
 Environment=ARXOS_STORE=/var/lib/arxos/store
-# Serve the local object store over Iroh (Phase 2 protocol).
+# Serve the local object store over Iroh. Ticket is $ARXOS_STORE/meta/serve.ticket
+# (0600); stdout does not print the full ticket. Do not stop this unit to apply
+# the inbox — `arx inbox apply` uses meta/serve.sock.
 ExecStart=/usr/local/bin/arxos-edge --store ${ARXOS_STORE} serve
 Restart=on-failure
 RestartSec=5

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Realize v2
+
+- Wall solids clip against neighboring non-parallel planes (same storey,
+  `|n_i·n_j| < 0.95`). Result is `Solid.outline_xy`; fewer than 3 vertices
+  keeps the v1 box. Hosted openings are listed on `Solid.voids`. A 2D notch
+  is subtracted only when it stays one polygon; otherwise void list only.
+
 ### Field / RoomPlan hosting
 
 - Opening host assignment projects the opening origin onto wall planes

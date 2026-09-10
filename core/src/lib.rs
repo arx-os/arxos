@@ -142,7 +142,7 @@ mod tests {
     fn hello_smoke() {
         let s = hello("Phase0".into());
         assert!(s.contains("Phase0"));
-        assert!(s.contains("0.1.0"));
+        assert!(s.contains(&version()));
     }
 
     #[test]

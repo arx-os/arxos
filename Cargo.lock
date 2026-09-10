@@ -134,7 +134,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "arxos-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arxos-core",
@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "ciborium",
@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-edge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arxos-core",
@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-ffi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arxos-core",
  "arxos-ifc",
@@ -203,7 +203,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-ifc"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arxos-core",
  "hex",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-networking"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arxos-core",
@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "arxos-usd"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arxos-core",
  "serde",

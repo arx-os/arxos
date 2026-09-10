@@ -6,7 +6,7 @@ Core library for Arxos: local-first content-addressed as-built repository.
 
 - **Content addressing**: Canonical CBOR + BLAKE3 CIDs
 - **Object schema**: Building, Floor, Space, Surface, Opening, Equipment, Run, Annotation, … + signatures. Schema v2 adds optional Fact fields (`extent`, `sigma_mm`, `support_count`, `evidence`, `host_entity`); v1 objects still load.
-- **State / fuse / realize**: `BuildingState` is \(S : EntityId \to Fact\). `fuse` geometrically merges two versions of the same entity on commit/merge. `realize` produces oriented boxes \(B = R(S)\) (read-only). Projectors (IFC / USD / ASCII) consume \(B\), never a writable store.
+- **State / fuse / realize**: `BuildingState` is \(S : EntityId \to Fact\). `fuse` geometrically merges two versions of the same entity on commit/merge. `realize` produces solids \(B = R(S)\) (v1 boxes; v2 clipped `outline_xy` + `voids`, box fallback). Projectors (IFC / USD / ASCII) consume \(B\), never a writable store.
 - **Roots**: Delta commits, checkpoints, materialization, sync closures, controller auth
   (two sign laws; adopt = self-consistency + replica continuity; first contact is TOFU)
 - **Spatial index**: Versioned R-tree as ordinary CAS objects

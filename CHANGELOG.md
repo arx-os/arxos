@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+## 0.2.0 - 2026-09-10
+
+Complete capture → inbox → fuse → realize v2 → export loop on a developer
+machine (simulate fixtures; field walk is out of band).
+
 ### Edge
 
 - `arxos-edge status`: lock, sock, ticket file, inbox pending, head CID

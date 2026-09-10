@@ -72,13 +72,35 @@ pub fn push_staged(
             &leaves,
             &author,
         )
-        .await?;
+        .await;
         node.close().await;
-        Ok(FfiPushSummary {
-            building_id: result.building_id,
-            accepted: result.accepted.len() as u64,
-            duplicate: result.duplicate.len() as u64,
-            rejected: result.rejected.len() as u64,
-        })
+        match result {
+            Ok(result) => {
+                let incomplete = result.put_rejected > 0 || !result.rejected.is_empty();
+                if incomplete {
+                    let _ = arxos_core::save_push_retry(
+                        std::path::Path::new(&store_path),
+                        &bid,
+                        &pending,
+                    );
+                } else if let Ok(mut w) = BuildingRepository::open(&store_path, &bid) {
+                    let _ = w.clear_staged_after_push(&pending);
+                }
+                Ok(FfiPushSummary {
+                    building_id: result.building_id,
+                    accepted: result.accepted.len() as u64,
+                    duplicate: result.duplicate.len() as u64,
+                    rejected: result.rejected.len() as u64,
+                })
+            }
+            Err(e) => {
+                let _ = arxos_core::save_push_retry(
+                    std::path::Path::new(&store_path),
+                    &bid,
+                    &pending,
+                );
+                Err(e.into())
+            }
+        }
     })
 }

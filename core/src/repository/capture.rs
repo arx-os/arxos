@@ -121,6 +121,25 @@ impl BuildingRepository {
         self.put_staged(obj)
     }
 
+    /// Drop staged CIDs after a successful `PushFactsOk`. Bytes stay in the CAS.
+    ///
+    /// Official history still only moves on inbox apply. This is the thin-client
+    /// ACK: the working set / pending list is no longer needed locally.
+    pub fn clear_staged_after_push(&mut self, cids: &[crate::cid::Cid]) -> Result<u64> {
+        self.require_write()?;
+        let mut n = 0u64;
+        for cid in cids {
+            if self.record.pending.remove(cid) {
+                n += 1;
+            }
+            self.working_set.unstaged(cid);
+        }
+        self.record.updated = now_secs();
+        Self::write_record(self.store.root(), &self.record)?;
+        crate::inbox::clear_push_retry(self.store.root(), self.building_id())?;
+        Ok(n)
+    }
+
     /// Stage an object CID for removal on the next commit.
     ///
     /// The object remains in the CAS (content-addressed history); it is dropped

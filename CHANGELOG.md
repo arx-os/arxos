@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Thin client
+
+- After `PushFactsOk`, staged pending is cleared (CAS bytes remain). Incomplete
+  or failed push writes `$STORE/meta/push_retry/<id>.json` (0600) and keeps
+  staging so a force-quit can retry. iOS: ticket path does not local-commit
+  on push failure; status is “pushed, pending apply” vs “local only (no ticket)”.
+
 ### Projectors
 
 - IFC: `IfcRelVoidsElement` from hosted openings / `Solid.voids`; `IfcDoor` /

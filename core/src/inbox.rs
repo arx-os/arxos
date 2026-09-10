@@ -142,6 +142,72 @@ pub fn inbox_remove(
     Ok(n)
 }
 
+/// Hidden journal of leaf CIDs when a push fails (survives process death).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PushRetryFile {
+    pub building_id: String,
+    #[serde(default)]
+    pub cids: Vec<String>,
+    #[serde(default)]
+    pub updated: u64,
+}
+
+/// `$STORE/meta/push_retry/<building_id>.json`
+pub fn push_retry_path(store_root: impl AsRef<Path>, building_id: &BuildingId) -> PathBuf {
+    store_root
+        .as_ref()
+        .join("meta")
+        .join("push_retry")
+        .join(format!("{building_id}.json"))
+}
+
+/// Record leaf CIDs after a failed push. CAS bytes stay; this is the retry queue.
+pub fn save_push_retry(
+    store_root: impl AsRef<Path>,
+    building_id: &BuildingId,
+    cids: &[Cid],
+) -> Result<()> {
+    let path = push_retry_path(store_root, building_id);
+    let file = PushRetryFile {
+        building_id: building_id.to_string(),
+        cids: cids.iter().map(|c| c.to_string()).collect(),
+        updated: now_secs(),
+    };
+    let bytes = serde_json::to_vec_pretty(&file)
+        .map_err(|e| Error::Serialization(format!("push_retry json: {e}")))?;
+    atomic_write(&path, &bytes)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
+}
+
+/// Load a retry journal; missing file is `None`.
+pub fn load_push_retry(
+    store_root: impl AsRef<Path>,
+    building_id: &BuildingId,
+) -> Result<Option<PushRetryFile>> {
+    let path = push_retry_path(store_root, building_id);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let bytes = fs::read(&path)?;
+    let file: PushRetryFile = serde_json::from_slice(&bytes)
+        .map_err(|e| Error::Deserialization(format!("push_retry json: {e}")))?;
+    Ok(Some(file))
+}
+
+/// Drop the retry journal after `PushFactsOk`.
+pub fn clear_push_retry(store_root: impl AsRef<Path>, building_id: &BuildingId) -> Result<()> {
+    let path = push_retry_path(store_root, building_id);
+    if path.exists() {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
 trait CidFromStr {
     fn from_str_checked(s: &str) -> Result<Cid>;
 }
@@ -174,5 +240,17 @@ mod tests {
         let file = load_inbox(dir.path(), &bid).unwrap();
         assert_eq!(file.pending.len(), 1);
         assert_eq!(file.pending[0].author_hex, "ed25519:ab");
+    }
+
+    #[test]
+    fn push_retry_journal_roundtrip() {
+        let dir = tempdir().unwrap();
+        let bid = BuildingId::new();
+        let cid = Cid::from_canonical_bytes(b"retry-leaf");
+        save_push_retry(dir.path(), &bid, &[cid]).unwrap();
+        let loaded = load_push_retry(dir.path(), &bid).unwrap().expect("journal");
+        assert_eq!(loaded.cids, vec![cid.to_string()]);
+        clear_push_retry(dir.path(), &bid).unwrap();
+        assert!(load_push_retry(dir.path(), &bid).unwrap().is_none());
     }
 }

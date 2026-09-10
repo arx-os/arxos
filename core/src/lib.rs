@@ -72,7 +72,10 @@ pub use ctl::{
     ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, spawn_serve_ctl, wake_ctl,
     CtlReply, CtlRequest, ServeSockGuard, SERVE_SOCK_REL,
 };
-pub use inbox::{inbox_add, inbox_path, load_inbox, InboxAdd, InboxEntry, InboxFile};
+pub use inbox::{
+    clear_push_retry, inbox_add, inbox_path, load_inbox, load_push_retry, save_push_retry,
+    InboxAdd, InboxEntry, InboxFile, PushRetryFile,
+};
 pub use locator::BuildingLocator;
 pub use realize::{
     ascii_slice, high_sigma_skip_count, realize, Realization, Solid, SolidKind, SIGMA_EXCLUDE_MM,

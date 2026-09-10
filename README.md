@@ -14,7 +14,7 @@ Field contributors write the as-built record at the wall.
 2. **Commit / fuse.** Each object is an immutable file named by a hash of its contents. A second walk of the same `EntityId` fuses into one live version. Controllers — keys on the Building object — commit, adopt, and merge.
 3. **Push \(\Delta\).** Contributors `net push` canonical Fact bytes into the building **inbox** (`meta/inbox/<id>.json`). Push never moves `head_root`.
 4. **Apply.** A controller runs `arx inbox apply $BID`. If `net serve` is up, apply goes through `$STORE/meta/serve.sock` (the lock holder). Head still moves only in `inbox_apply`.
-5. **Realize / project.** \(B = R(S)\) is oriented boxes. Export IFC (`IFCWALL`) or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
+5. **Realize / project.** \(B = R(S)\) is solids (v1 boxes; v2 clipped wall outlines + void lists, box fallback). Export IFC (`IFCWALL` + voids) or USD, or `arx building slice` for an ASCII floor plan. There is no product 3D viewport.
 
 One process writes a given store at a time. Extra work is just another object CID plus an inbox list. There is no proposal object type. Do not stop systemd to apply — serve owns the writer lock and the control socket.
 
@@ -26,15 +26,15 @@ Arxos is the data plane for a physical network: people and devices in the field 
 - **Scoring** (`arx score`) is deterministic. Given the same store, Root, and policy, everyone gets the same points report. Points measure contribution; they are not money.
 - **Settlement is fiat, off-band.** Ops can pay contributors from those scores. This repo never embeds currency in CIDs and does not mint a token.
 
-Today scoring is diagnostic (type-count weights plus a signed-object bonus). Do not treat it as a payroll number until multi-signal quality scoring is intentional product work.
+Today scoring is diagnostic (type-count weights, a signed-object bonus, plus policy v2 terms for `support_count`, unresolved hosts, and \(\sigma > 500\) mm). Same store + root + policy → same report. Do not treat it as a payroll number.
 
 ## What works today
 
-- Capture on a LiDAR iPhone (RoomPlan) or with `arx capture simulate` (wall Facts, σ = 40 mm)
+- Capture on a LiDAR iPhone (RoomPlan) or with `arx capture simulate` (4×4 m hall walls + hosted door, σ = 40 mm; `--dx` / `--sigma-mm` for a second walk)
 - Inspect the head, list entities (extent / σ / support), diagnostic scoring (`arx score`)
 - Fuse on commit: same Apple UUID / `EntityId` updates the wall instead of stacking walls
 - Opening host: wall plane + padded extent (0.35 m / 0.15 m); unresolved openings are not glued to a random wall
-- Realize solids and project IFC (`IFCWALL`), USD (cube prims), ASCII (`arx building slice`)
+- Realize v2 solids (clipped `outline_xy` + `voids`) and project IFC (`IFCWALL`, `IFCRELVOIDSELEMENT`), USD (cubes + `arxos:voids`), ASCII (`arx building slice`)
 - LAN pull over Iroh (`arxos/sync/1`) and mDNS (no public relays by default); long-running `arxos-edge serve`
 - Merge concurrent controller tips (entity conflicts fuse)
 - Contributor **inbox**: `net push` Facts; controller `inbox apply` fuses them into the head (via serve socket while `net serve` is running)

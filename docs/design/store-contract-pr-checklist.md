@@ -132,7 +132,7 @@ Field stores will outlive the next refactor.
 
 - [ ] Object envelope `schema_version` stays `>= 1`; current `SCHEMA_VERSION` is `1` (`core/src/object/mod.rs`). Bumps are explicit and documented in `docs/schema/object-schema.md`.
 - [ ] Root body fields (`previous_root`, `merge_parents`, `authors`, `added`/`removed`/`objects`) are not silently reinterpreted.
-- [ ] `ScoreReport.policy_version` (default `1`) is the pattern: version the policy, do not mutate old reports in place.
+- [ ] `ScoreReport.policy_version` (default `2`) is the pattern: version the policy, do not mutate old reports in place.
 - [ ] JSON sketches `docs/schema/object-envelope.schema.json` and `root-body.schema.json` match the Rust types if either side changes.
 
 ## Hygiene (do not re-open)

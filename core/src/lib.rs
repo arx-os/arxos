@@ -69,8 +69,9 @@ pub use entity::{
 };
 pub use fuse::{fuse, fuse_active_set};
 pub use ctl::{
-    ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, spawn_serve_ctl, wake_ctl,
-    CtlReply, CtlRequest, ServeSockGuard, SERVE_SOCK_REL,
+    ctl_send, handle_ctl, serve_ctl_path_exists, serve_sock_path, serve_ticket_path,
+    spawn_serve_ctl, wake_ctl, write_serve_ticket, CtlReply, CtlRequest, ServeSockGuard,
+    SERVE_SOCK_REL, SERVE_TICKET_REL,
 };
 pub use inbox::{
     clear_push_retry, inbox_add, inbox_path, load_inbox, load_push_retry, save_push_retry,

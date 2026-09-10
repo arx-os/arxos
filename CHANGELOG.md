@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Edge
+
+- `arxos-edge status`: lock, sock, ticket file, inbox pending, head CID
+  (read-only). Serve writes `$STORE/meta/serve.ticket` (0600) and does not
+  print the full ticket to stdout (systemd journals). Apply does not restart
+  the unit. Backup: copy the store while serve is stopped.
+
 ### Thin client
 
 - After `PushFactsOk`, staged pending is cleared (CAS bytes remain). Incomplete

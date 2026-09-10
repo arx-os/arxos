@@ -55,15 +55,18 @@ In Xcode:
 
 ### Field loop
 
-1. **Init** a building (or reopen last — restored automatically after force-quit).
-2. **Start RoomPlan scan** → walk the room → **Stop**.
-3. Paste an `arx://bldg/…` locator (or a raw ticket) into **Join**. Ingest Facts. With a saved ticket, the app **pushes** staged Facts (status: facts pushed, pending apply). Without a ticket, local auto-commit remains force-quit safety. **Export store…** is Advanced/debug.
-4. Force-quit → reopen → same building and head.
-5. **Export store…** to AirDrop / share a snapshot to a Mac. The live store is not in Files.app.
+Official history lives on the edge / laptop. The phone is a camera.
 
-## 3. Inspect on Mac CLI
+1. On the edge: `building init`, `net serve`, copy the `arx://` URI (ticket from `$STORE/meta/serve.ticket`).
+2. On the phone: paste the URI (or raw ticket) into **Join**. Pins persist.
+3. **Start RoomPlan** → walk → **Stop**. With a ticket: status **facts pushed, pending apply**. Without: **local only (no ticket)** (auto-commit is force-quit safety).
+4. On the edge, **while serve stays up**: `inbox apply`. Then `entity list` (expect `support=2` on a second walk that reused Apple UUIDs).
+5. Force-quit → reopen → queued push retries if staging was still pending.
+6. **Export store…** is Advanced/debug (disaster recovery), not the happy path. Two-stop script: [docs/field/ROOM_WALK.md](../docs/field/ROOM_WALK.md).
 
-After AirDrop / Files copy of the store folder (name may be `arxos-store-…`):
+## 3. Inspect on Mac CLI (Advanced / debug store copy)
+
+After **Export store…** / AirDrop of a snapshot (not the field loop):
 
 ```bash
 export ARXOS_STORE=/path/to/arxos-store   # directory that contains objects/ and meta/

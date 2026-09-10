@@ -69,6 +69,10 @@ pub async fn run(cli: &Cli, command: NetCommands) -> Result<()> {
             );
             node.refresh_buildings().await?;
             let ticket = node.ticket().await?;
+            match arxos_core::write_serve_ticket(&cli.store, &ticket) {
+                Ok(p) => println!("ticket_file={}", p.display()),
+                Err(e) => eprintln!("warning: could not write serve.ticket: {e}"),
+            }
             println!("peer_id={}", node.peer_id());
             println!("ticket={ticket}");
             println!("store={}", cli.store.display());

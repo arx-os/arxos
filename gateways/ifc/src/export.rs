@@ -394,9 +394,7 @@ fn placement_for_pose(
         None => (0.0, 0.0, 0.0),
     };
     let pt = w.emit(&format!("IFCCARTESIANPOINT(({x},{y},{z}))"));
-    let axis = w.emit(&format!(
-        "IFCAXIS2PLACEMENT3D(#{pt},#{axis_z},#{axis_x})"
-    ));
+    let axis = w.emit(&format!("IFCAXIS2PLACEMENT3D(#{pt},#{axis_z},#{axis_x})"));
     w.emit(&format!("IFCLOCALPLACEMENT(#{parent_place},#{axis})"))
 }
 
@@ -419,12 +417,10 @@ fn emit_realized_solids(
         let (ifc_type, obj_ty) = match solid.kind {
             SolidKind::Wall => ("IFCWALL", "surface"),
             SolidKind::Slab => ("IFCSLAB", "surface"),
-            SolidKind::Opening => match state
-                .get(&solid.entity_id)
-                .and_then(|o| match &o.body {
-                    ObjectBody::Opening(b) => b.opening_kind.as_deref(),
-                    _ => None,
-                }) {
+            SolidKind::Opening => match state.get(&solid.entity_id).and_then(|o| match &o.body {
+                ObjectBody::Opening(b) => b.opening_kind.as_deref(),
+                _ => None,
+            }) {
                 Some("window") => ("IFCWINDOW", "opening"),
                 Some("door") => ("IFCDOOR", "opening"),
                 _ => ("IFCOPENINGELEMENT", "opening"),
@@ -432,8 +428,12 @@ fn emit_realized_solids(
             SolidKind::Equipment => ("IFCBUILDINGELEMENTPROXY", "equipment"),
             SolidKind::Run => ("IFCFLOWSEGMENT", "run"),
         };
-        let loc = placement_from_solid(w, world, solid);
-        let body_shape = extruded_box_shape(w, ctx, solid);
+        let loc = if solid.outline_xy.as_ref().is_some_and(|p| p.len() >= 3) {
+            placement_from_solid_face(w, world, solid)
+        } else {
+            placement_from_solid(w, world, solid)
+        };
+        let body_shape = extruded_shape(w, ctx, solid);
         let gid = global_id_from_cid(&solid.cid);
         let name = ifc_str(solid.entity_id.as_str());
         let elem = w.emit(&format!(
@@ -449,7 +449,14 @@ fn emit_realized_solids(
             building_id,
             Some(solid.entity_id.as_str()),
         );
-        emit_measure_pset(w, owner, elem, &solid.cid, state.get(&solid.entity_id), solid);
+        emit_measure_pset(
+            w,
+            owner,
+            elem,
+            &solid.cid,
+            state.get(&solid.entity_id),
+            solid,
+        );
         match solid.kind {
             SolidKind::Wall | SolidKind::Slab => {
                 wall_ids.insert(solid.entity_id.clone(), elem);
@@ -462,17 +469,37 @@ fn emit_realized_solids(
         }
     }
 
+    // Void relationships: Opening.host and host Solid.voids (realize v2).
+    let mut voided: BTreeMap<(u64, u64), ()> = BTreeMap::new();
     for (solid, opening_id) in &openings {
         if let Some(host) = &solid.host {
             if let Some(host_id) = wall_ids.get(host) {
-                w.emit(&format!(
-                    "IFCRELVOIDSELEMENT({},#{owner},$,$,#{host_id},#{opening_id})",
-                    ifc_str(&global_id_from_cid(&Cid::from_canonical_bytes(
-                        format!("rel:voids:{}", solid.cid).as_bytes()
-                    )))
-                ));
+                voided.insert((*host_id, *opening_id), ());
             }
         }
+    }
+    for solid in solids {
+        if solid.kind != SolidKind::Wall || solid.voids.is_empty() {
+            continue;
+        }
+        let Some(host_id) = wall_ids.get(&solid.entity_id) else {
+            continue;
+        };
+        for vid in &solid.voids {
+            if let Some((_, opening_id)) = openings.iter().find(|(s, _)| s.entity_id == *vid) {
+                voided.insert((*host_id, *opening_id), ());
+            }
+        }
+    }
+    for ((host_id, opening_id), _) in &voided {
+        let rel_cid =
+            Cid::from_canonical_bytes(format!("rel:voids:{host_id}:{opening_id}").as_bytes());
+        w.emit(&format!(
+            "IFCRELVOIDSELEMENT({},#{owner},$,$,#{host_id},#{opening_id})",
+            ifc_str(&global_id_from_cid(&rel_cid))
+        ));
+    }
+    for (_, opening_id) in &openings {
         element_ids.push(*opening_id);
     }
 
@@ -491,26 +518,63 @@ fn emit_realized_solids(
     }
 }
 
+/// Placement with IFC Z = wall local Z (thickness) so `outline_xy` is the profile.
+fn placement_from_solid_face(w: &mut Writer, parent: u64, solid: &Solid) -> u64 {
+    let p = solid.pose.position;
+    let x = solid.pose.local_x();
+    let z = solid.pose.local_z();
+    let pt = w.emit(&format!("IFCCARTESIANPOINT(({},{},{}))", p[0], p[1], p[2]));
+    let axis = w.emit(&format!("IFCDIRECTION(({},{},{}))", z[0], z[1], z[2]));
+    let refd = w.emit(&format!("IFCDIRECTION(({},{},{}))", x[0], x[1], x[2]));
+    let place = w.emit(&format!("IFCAXIS2PLACEMENT3D(#{pt},#{axis},#{refd})"));
+    w.emit(&format!("IFCLOCALPLACEMENT(#{parent},#{place})"))
+}
+
 fn placement_from_solid(w: &mut Writer, parent: u64, solid: &Solid) -> u64 {
     let p = solid.pose.position;
     let x = solid.pose.local_x();
     let y = solid.pose.local_y();
-    let pt = w.emit(&format!(
-        "IFCCARTESIANPOINT(({},{},{}))",
-        p[0], p[1], p[2]
-    ));
-    let axis = w.emit(&format!(
-        "IFCDIRECTION(({},{},{}))",
-        y[0], y[1], y[2]
-    ));
-    let refd = w.emit(&format!(
-        "IFCDIRECTION(({},{},{}))",
-        x[0], x[1], x[2]
-    ));
-    let place = w.emit(&format!(
-        "IFCAXIS2PLACEMENT3D(#{pt},#{axis},#{refd})"
-    ));
+    let pt = w.emit(&format!("IFCCARTESIANPOINT(({},{},{}))", p[0], p[1], p[2]));
+    let axis = w.emit(&format!("IFCDIRECTION(({},{},{}))", y[0], y[1], y[2]));
+    let refd = w.emit(&format!("IFCDIRECTION(({},{},{}))", x[0], x[1], x[2]));
+    let place = w.emit(&format!("IFCAXIS2PLACEMENT3D(#{pt},#{axis},#{refd})"));
     w.emit(&format!("IFCLOCALPLACEMENT(#{parent},#{place})"))
+}
+
+fn extruded_shape(w: &mut Writer, ctx: u64, solid: &Solid) -> u64 {
+    if let Some(outline) = solid.outline_xy.as_ref().filter(|p| p.len() >= 3) {
+        extruded_outline_shape(w, ctx, solid, outline)
+    } else {
+        extruded_box_shape(w, ctx, solid)
+    }
+}
+
+fn extruded_outline_shape(w: &mut Writer, ctx: u64, solid: &Solid, outline: &[[f64; 2]]) -> u64 {
+    let mut pts = Vec::new();
+    for p in outline {
+        pts.push(w.emit(&format!("IFCCARTESIANPOINT(({},{}))", p[0], p[1])));
+    }
+    pts.push(pts[0]);
+    let refs = pts
+        .iter()
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let poly = w.emit(&format!("IFCPOLYLINE(({refs}))"));
+    let profile = w.emit(&format!("IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#{poly})"));
+    let thick = solid.extent[2];
+    let origin3 = w.emit(&format!("IFCCARTESIANPOINT((0.,0.,{}))", -thick / 2.0));
+    let zdir = w.emit("IFCDIRECTION((0.,0.,1.))");
+    let xdir = w.emit("IFCDIRECTION((1.,0.,0.))");
+    let p3 = w.emit(&format!("IFCAXIS2PLACEMENT3D(#{origin3},#{zdir},#{xdir})"));
+    let extrude_dir = w.emit("IFCDIRECTION((0.,0.,1.))");
+    let solid_id = w.emit(&format!(
+        "IFCEXTRUDEDAREASOLID(#{profile},#{p3},#{extrude_dir},{thick})"
+    ));
+    let rep = w.emit(&format!(
+        "IFCSHAPEREPRESENTATION(#{ctx},'Body','SweptSolid',(#{solid_id}))"
+    ));
+    w.emit(&format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{rep}))"))
 }
 
 fn extruded_box_shape(w: &mut Writer, ctx: u64, solid: &Solid) -> u64 {
@@ -521,15 +585,10 @@ fn extruded_box_shape(w: &mut Writer, ctx: u64, solid: &Solid) -> u64 {
     let profile = w.emit(&format!(
         "IFCRECTANGLEPROFILEDEF(.AREA.,$,#{p2},{width},{thick})"
     ));
-    let origin3 = w.emit(&format!(
-        "IFCCARTESIANPOINT((0.,{},0.))",
-        -height / 2.0
-    ));
+    let origin3 = w.emit(&format!("IFCCARTESIANPOINT((0.,{},0.))", -height / 2.0));
     let zdir = w.emit("IFCDIRECTION((0.,0.,1.))");
     let xdir = w.emit("IFCDIRECTION((1.,0.,0.))");
-    let p3 = w.emit(&format!(
-        "IFCAXIS2PLACEMENT3D(#{origin3},#{zdir},#{xdir})"
-    ));
+    let p3 = w.emit(&format!("IFCAXIS2PLACEMENT3D(#{origin3},#{zdir},#{xdir})"));
     let extrude_dir = w.emit("IFCDIRECTION((0.,0.,1.))");
     let solid_id = w.emit(&format!(
         "IFCEXTRUDEDAREASOLID(#{profile},#{p3},#{extrude_dir},{height})"

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Projectors
+
+- IFC: `IfcRelVoidsElement` from hosted openings / `Solid.voids`; `IfcDoor` /
+  `IfcWindow` from opening kind; extrusion from `outline_xy` when clipped.
+  HEADER remains `ViewDefinition [ArxosAsBuiltView]`.
+- USD: cubes plus `arxos:voids` / `arxos:hasOutline` metadata (honest cube, not
+  a guessed mesh).
+
 ### Realize v2
 
 - Wall solids clip against neighboring non-parallel planes (same storey,

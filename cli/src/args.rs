@@ -136,7 +136,9 @@ pub enum ExportCommands {
         #[arg(long)]
         no_points: bool,
     },
-    /// Export building head as IFC4 STEP (identity + labels; not a certified CoordinationView)
+    /// Export building head as IFC4 STEP (ArxosAsBuiltView; not CoordinationView).
+    ///
+    /// Realize v2: walls + hosted voids. No sloped slabs, no curtain wall.
     Ifc {
         building_id: String,
         #[arg(long, short)]

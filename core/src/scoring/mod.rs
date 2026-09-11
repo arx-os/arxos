@@ -120,7 +120,7 @@ pub struct ScoreWeights {
     /// Subtracted when an Opening has no host wall.
     #[serde(default = "default_unresolved_host_penalty")]
     pub unresolved_host_penalty: f64,
-    /// Subtracted when Fact \(\sigma\) exceeds [`crate::realize::SIGMA_EXCLUDE_MM`].
+    /// Subtracted when Fact \(\sigma\) exceeds [`crate::measure::SIGMA_EXCLUDE_MM`].
     #[serde(default = "default_high_sigma_penalty")]
     pub high_sigma_penalty: f64,
 }
@@ -185,7 +185,7 @@ fn quality_adjust(c: &Contribution, w: &ScoreWeights) -> f64 {
         adj -= w.unresolved_host_penalty;
     }
     if c.sigma_mm
-        .map(|s| s > crate::realize::SIGMA_EXCLUDE_MM)
+        .map(|s| s > crate::measure::SIGMA_EXCLUDE_MM)
         .unwrap_or(false)
     {
         adj -= w.high_sigma_penalty;
@@ -646,7 +646,7 @@ mod tests {
             vec![fact_contrib(
                 Cid::from_bytes([3; 32]),
                 1,
-                Some(crate::realize::SIGMA_EXCLUDE_MM + 1.0),
+                Some(crate::measure::SIGMA_EXCLUDE_MM + 1.0),
                 false,
             )],
             None,

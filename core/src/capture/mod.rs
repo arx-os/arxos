@@ -4,6 +4,8 @@
 //! Point clouds and meshes may be referenced as evidence; they are not the
 //! official geometry of a wall.
 
+pub mod fixtures;
+pub mod host;
 pub mod roomplan;
 
 use std::collections::BTreeMap;

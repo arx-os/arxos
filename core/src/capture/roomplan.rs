@@ -6,7 +6,6 @@
 
 use std::collections::BTreeMap;
 
-use crate::cid::Cid;
 use crate::entity::EntityId;
 use crate::error::{Error, Result};
 use crate::object::{
@@ -27,19 +26,14 @@ pub const DEFAULT_WALL_THICKNESS_M: f64 = 0.15;
 /// Default slab / floor / ceiling thickness when omitted (meters).
 pub const DEFAULT_SLAB_THICKNESS_M: f64 = 0.30;
 
-/// Max plane distance (meters) for an Opening to attach to a wall.
-///
-/// Farther than this, the opening is emitted with `host_entity = None` and
-/// property `host=unresolved`. Realize / IFC skip the void relationship
-/// until a later ingest resolves the host.
-pub const HOST_PLANE_MAX_M: f64 = 0.35;
-/// In-plane pad (meters) added to wall `extent` when testing the projected
-/// opening origin. Projection outside the padded rectangle is not a host.
-pub const HOST_EXTENT_PAD_M: f64 = 0.15;
-/// Opening property value when no wall host survives the heuristic.
-pub const HOST_UNRESOLVED: &str = "unresolved";
-/// Opening property key for host resolution status.
-pub const HOST_PROP: &str = "host";
+pub use super::fixtures::{
+    hall_four_walls, hall_four_walls_with_door, identity_transform, rot_y_90_transform,
+    HALL_DOOR_UUID,
+};
+pub use super::host::{
+    plane_distance, resolve_opening_host, wall_local_xy, WallHostCandidate, HOST_EXTENT_PAD_M,
+    HOST_PLANE_MAX_M, HOST_PROP, HOST_UNRESOLVED,
+};
 
 /// One RoomPlan captured surface (wall, floor, door, window, …).
 #[derive(Debug, Clone, PartialEq)]
@@ -167,93 +161,6 @@ fn extent_from_dimensions(dimensions: &[f64], kind: &str) -> Result<[f64; 3]> {
     }
     crate::object::canonicalize_extent(&mut e)?;
     Ok(e)
-}
-
-/// Distance from `point` to the wall plane (local XY of `wall_pose`; normal = local +Z).
-pub fn plane_distance(wall_pose: &Pose, point: [f64; 3]) -> f64 {
-    let n = wall_pose.local_z();
-    let dx = point[0] - wall_pose.position[0];
-    let dy = point[1] - wall_pose.position[1];
-    let dz = point[2] - wall_pose.position[2];
-    (n[0] * dx + n[1] * dy + n[2] * dz).abs()
-}
-
-/// Wall face coordinates of `point` in the wall pose's local XY (meters).
-///
-/// Equivalent to projecting onto the plane, then reading local X/Y: the
-/// normal component does not contribute to those axes.
-pub fn wall_local_xy(wall_pose: &Pose, point: [f64; 3]) -> [f64; 2] {
-    let dx = point[0] - wall_pose.position[0];
-    let dy = point[1] - wall_pose.position[1];
-    let dz = point[2] - wall_pose.position[2];
-    let x = wall_pose.local_x();
-    let y = wall_pose.local_y();
-    [
-        x[0] * dx + x[1] * dy + x[2] * dz,
-        y[0] * dx + y[1] * dy + y[2] * dz,
-    ]
-}
-
-/// One wall that may host an Opening. Built from mapped `Surface` Facts
-/// with `surface_kind = wall` (slabs / ceilings are not candidates).
-#[derive(Debug, Clone)]
-pub struct WallHostCandidate {
-    pub entity_id: EntityId,
-    pub pose: Pose,
-    /// Local extent: `[width, height, thickness]` (meters).
-    pub extent: [f64; 3],
-    /// Unsigned CID of the wall Fact in this ingest batch (tie-break only).
-    pub cid: Cid,
-}
-
-/// Assign an Opening to a wall host.
-///
-/// 1. Candidates: walls only.
-/// 2. Project the opening origin onto each wall plane.
-/// 3. Reject if plane distance `> HOST_PLANE_MAX_M` or the projection falls
-///    outside wall `extent` expanded by `HOST_EXTENT_PAD_M`.
-/// 4. Winner: smallest plane distance; tie → larger face area
-///    (`extent[0] * extent[1]`); tie → higher CID.
-///
-/// `None` means leave `host_entity` unset and stamp `host=unresolved`.
-/// Do not glue the opening to a random nearby wall.
-pub fn resolve_opening_host(walls: &[WallHostCandidate], opening: &Pose) -> Option<EntityId> {
-    let mut best: Option<(EntityId, f64, f64, Cid)> = None;
-    for w in walls {
-        let dist = plane_distance(&w.pose, opening.position);
-        if dist > HOST_PLANE_MAX_M {
-            continue;
-        }
-        let [lx, ly] = wall_local_xy(&w.pose, opening.position);
-        if lx.abs() > w.extent[0] / 2.0 + HOST_EXTENT_PAD_M
-            || ly.abs() > w.extent[1] / 2.0 + HOST_EXTENT_PAD_M
-        {
-            continue;
-        }
-        let area = w.extent[0] * w.extent[1];
-        let better = match &best {
-            None => true,
-            Some((_, bd, ba, bc)) => {
-                if dist < *bd - 1e-9 {
-                    true
-                } else if (dist - *bd).abs() < 1e-9 {
-                    if area > *ba + 1e-9 {
-                        true
-                    } else if (area - *ba).abs() < 1e-9 {
-                        w.cid > *bc
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
-        };
-        if better {
-            best = Some((w.entity_id.clone(), dist, area, w.cid));
-        }
-    }
-    best.map(|(e, _, _, _)| e)
 }
 
 fn source_props(id: &str) -> BTreeMap<String, String> {
@@ -464,79 +371,6 @@ fn expand_bounds(acc: &mut Option<Aabb>, bounds: &Aabb) {
     }
 }
 
-/// Identity 4×4 column-major with translation `(tx, ty, tz)`.
-pub fn identity_transform(tx: f64, ty: f64, tz: f64) -> Vec<f64> {
-    vec![
-        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, tx, ty, tz, 1.0,
-    ]
-}
-
-/// 90° about +Y (wall facing +X): local X along −Z, local Y up, local Z along +X.
-pub fn rot_y_90_transform(tx: f64, ty: f64, tz: f64) -> Vec<f64> {
-    vec![
-        0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, tx, ty, tz, 1.0,
-    ]
-}
-
-/// Stable Apple UUID for the simulated hall door (south wall).
-pub const HALL_DOOR_UUID: &str = "00000000-0000-0000-0000-000000000010";
-
-/// Four walls of a 4×4 m room (centers at height 1.25 m, thickness 0.15 m).
-///
-/// Stable Apple-style UUIDs so a second call with a translation fuses rather
-/// than stacking walls. Used by CLI simulate and slice golden tests.
-pub fn hall_four_walls(translation: [f64; 3], sigma_ignored_here: f64) -> RoomPlanGeometry {
-    let _ = sigma_ignored_here;
-    let [dx, dy, dz] = translation;
-    let h = 1.25 + dy;
-    RoomPlanGeometry {
-        surfaces: vec![
-            RoomPlanSurface {
-                id: "00000000-0000-0000-0000-000000000001".into(),
-                category: "wall".into(),
-                transform: identity_transform(2.0 + dx, h, 0.0 + dz),
-                dimensions: vec![4.0, 2.5, 0.15],
-            },
-            RoomPlanSurface {
-                id: "00000000-0000-0000-0000-000000000002".into(),
-                category: "wall".into(),
-                transform: identity_transform(2.0 + dx, h, 4.0 + dz),
-                dimensions: vec![4.0, 2.5, 0.15],
-            },
-            RoomPlanSurface {
-                id: "00000000-0000-0000-0000-000000000003".into(),
-                category: "wall".into(),
-                transform: rot_y_90_transform(0.0 + dx, h, 2.0 + dz),
-                dimensions: vec![4.0, 2.5, 0.15],
-            },
-            RoomPlanSurface {
-                id: "00000000-0000-0000-0000-000000000004".into(),
-                category: "wall".into(),
-                transform: rot_y_90_transform(4.0 + dx, h, 2.0 + dz),
-                dimensions: vec![4.0, 2.5, 0.15],
-            },
-        ],
-        objects: Vec::new(),
-    }
-}
-
-/// [`hall_four_walls`] plus a 0.9×2.1 m door on the south wall (z = 0).
-///
-/// Same Apple UUIDs as the walls helper so `--dx` / `--sigma-mm` simulate
-/// walks fuse. The door origin sits 50 mm in front of the wall plane so
-/// [`resolve_opening_host`] accepts it.
-pub fn hall_four_walls_with_door(translation: [f64; 3], sigma_mm: f64) -> RoomPlanGeometry {
-    let mut g = hall_four_walls(translation, sigma_mm);
-    let [dx, dy, dz] = translation;
-    g.surfaces.push(RoomPlanSurface {
-        id: HALL_DOOR_UUID.into(),
-        category: "door".into(),
-        transform: identity_transform(2.0 + dx, 1.05 + dy, 0.05 + dz),
-        dimensions: vec![0.9, 2.1, 0.1],
-    });
-    g
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -663,53 +497,6 @@ mod tests {
         let (host, host_prop) = opening_host(&mapped);
         assert_eq!(host, None);
         assert_eq!(host_prop.as_deref(), Some(HOST_UNRESOLVED));
-    }
-
-    #[test]
-    fn equal_distance_prefers_larger_area_then_higher_cid() {
-        let pose = Pose {
-            position: [0.0, 1.25, 0.0],
-            orientation: [0.0, 0.0, 0.0, 1.0],
-        };
-        let opening = Pose {
-            position: [0.0, 1.0, 0.05],
-            orientation: [0.0, 0.0, 0.0, 1.0],
-        };
-        let small = WallHostCandidate {
-            entity_id: EntityId::from("rp:small".to_string()),
-            pose: pose.clone(),
-            extent: [2.0, 2.5, 0.15],
-            cid: Cid::from_bytes([1; 32]),
-        };
-        let large = WallHostCandidate {
-            entity_id: EntityId::from("rp:large".to_string()),
-            pose: pose.clone(),
-            extent: [4.0, 2.5, 0.15],
-            cid: Cid::from_bytes([0; 32]),
-        };
-        assert_eq!(
-            resolve_opening_host(&[small.clone(), large.clone()], &opening)
-                .map(|e| e.as_str().to_string()),
-            Some("rp:large".into())
-        );
-
-        let a = WallHostCandidate {
-            entity_id: EntityId::from("rp:a".to_string()),
-            pose: pose.clone(),
-            extent: [4.0, 2.5, 0.15],
-            cid: Cid::from_bytes([1; 32]),
-        };
-        let b = WallHostCandidate {
-            entity_id: EntityId::from("rp:b".to_string()),
-            pose,
-            extent: [4.0, 2.5, 0.15],
-            cid: Cid::from_bytes([2; 32]),
-        };
-        assert_eq!(
-            resolve_opening_host(&[a, b], &opening).map(|e| e.as_str().to_string()),
-            Some("rp:b".into()),
-            "tie on distance and area → higher CID"
-        );
     }
 
     #[test]

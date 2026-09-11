@@ -32,9 +32,8 @@ use crate::state::BuildingState;
 
 mod clip;
 pub use clip::{world_outline, CLIP_MIN_VERTS, NEIGHBOR_VERTICAL_MAX_M, PARALLEL_DOT};
+pub use crate::measure::SIGMA_EXCLUDE_MM;
 
-/// Skip solids looser than this 1σ (millimetres).
-pub const SIGMA_EXCLUDE_MM: f64 = 500.0;
 /// Default wall thickness when `extent[2]` is missing (meters).
 pub const WALL_THICKNESS_M: f64 = 0.15;
 /// Default slab / floor / ceiling thickness (meters).

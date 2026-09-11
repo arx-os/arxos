@@ -11,7 +11,7 @@ Core library for Arxos: local-first content-addressed as-built repository.
   (two sign laws; adopt = self-consistency + replica continuity; first contact is TOFU)
 - **Spatial index**: Versioned R-tree as ordinary CAS objects
 - **Repository**: Building head, working set, capture/commit (RoomPlan mapping in `capture::roomplan`)
-- **Scoring**: Deterministic contributor points (diagnostic; fiat settlement is off-band)
+- **Scoring**: Deterministic contributor points (diagnostic; fiat settlement is off-band). `SIGMA_EXCLUDE_MM` lives in `measure`; scoring must not import `realize`. `Object` is the envelope; fuse / realize / capture hold behavior.
 
 See the root [README](../README.md) for product identity, architecture, and Phase-0 boundaries.
 
